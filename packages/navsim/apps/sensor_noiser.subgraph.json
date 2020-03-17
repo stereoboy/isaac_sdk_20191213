@@ -1,0 +1,38 @@
+{
+  "modules": [
+    "navsim"
+  ],
+  "graph": {
+    "nodes": [
+      {
+        "name": "lidar",
+        "components": [
+          {
+            "name": "ledger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "random",
+            "type": "isaac::alice::Random"
+          },
+          {
+            "name": "flatscanNoiser",
+            "type": "isaac::navsim::FlatscanNoiser"
+          }
+        ]
+      }
+    ],
+    "edges": []
+  },
+  "config": {
+    "lidar": {
+      "flatscanNoiser": {
+        "beam_invalid_probability": 0.1,
+        "beam_random_probability": 0.0,
+        "beam_short_probability": 0.05,
+        "range_sigma_abs": 0.05,
+        "range_sigma_rel": 0.005
+      }
+    }
+  }
+}

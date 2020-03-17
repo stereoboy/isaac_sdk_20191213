@@ -1,0 +1,46 @@
+{
+  "name": "kinova_jaco_joint_velocity",
+  "modules": [
+    "kinova_jaco",
+    "//apps/samples/kinova_jaco_joint_velocity:sample_joint_velocity_controller"
+  ],
+  "graph": {
+    "nodes": [
+      {
+        "name": "kinova_jaco",
+        "components": [
+          {
+            "name": "message_ledger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "kinova_jaco",
+            "type": "isaac::kinova_jaco::KinovaJaco"
+          },
+          {
+            "name": "controller",
+            "type": "isaac::kinova_jaco::KinovaJacoSampleJointVelocityController"
+          }
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "source": "kinova_jaco/controller/joint_velocity_command",
+        "target": "kinova_jaco/kinova_jaco/joint_velocity_command"
+      }
+    ]
+  },
+  "config": {
+    "kinova_jaco": {
+      "kinova_jaco": {
+        "control_mode": "joint velocity",
+        "kinova_jaco_sdk_path": "/opt/JACO2SDK/API/",
+        "tick_period": "5ms"
+      },
+      "controller": {
+        "tick_period": "5.0ms"
+      }
+    }
+  }
+}

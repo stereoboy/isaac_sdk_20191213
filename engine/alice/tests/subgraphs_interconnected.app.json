@@ -1,0 +1,25 @@
+{
+  "name": "subgraphs",
+  "graph": {
+    "nodes": [
+      {
+        "name": "group1",
+        "subgraph": "engine/alice/tests/transmission_not_connected.group.json"
+      },
+      {
+        "name": "group2",
+        "subgraph": "engine/alice/tests/transmission_not_connected.group.json"
+      }
+    ],
+    "edges": [
+      {
+        "source": "group1.pub_outside_group/pub/foo",
+        "target": "group2.sub_outside_group/sub/foo"
+      },
+      {
+        "source": "group2.pub_outside_group/pub/foo",
+        "target": "group1.sub_outside_group/sub/foo"
+      }
+    ]
+  }
+}

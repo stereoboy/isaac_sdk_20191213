@@ -1,0 +1,26 @@
+{
+  "name": "ping_python",
+  "graph": {
+    "nodes": [
+      {
+        "name": "ping_node",
+        "components": [
+          {
+            "name": "ping_component",
+            "type": "isaac::alice::PyCodelet"
+          }
+        ]
+      }
+    ],
+    "edges": [ ]
+  },
+  "config": {
+    "ping_node": {
+      "ping_component":{
+        "config": {
+          "message": "Hello Word!"
+        }
+      }
+    }
+  }
+}

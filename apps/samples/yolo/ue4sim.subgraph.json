@@ -1,0 +1,58 @@
+{
+  "config": {
+    "interface": {
+      "output": {
+        "port": 5003,
+        "reconnect_interval": 0.5,
+        "host": "localhost"
+      },
+      "input": {
+        "port": 5004,
+        "reconnect_interval": 0.5
+      }
+    }
+  },
+  "graph": {
+    "nodes": [
+      {
+        "name": "interface",
+        "components": [
+          {
+            "name": "ledger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "subgraph",
+            "type": "isaac::alice::Subgraph"
+          },
+          {
+            "name": "input",
+            "type": "isaac::alice::TcpPublisher"
+          },
+          {
+            "name": "output",
+            "type": "isaac::alice::TcpSubscriber"
+          },
+          {
+            "name": "time_sync",
+            "type": "isaac::alice::TimeSynchronizer"
+          }
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "source": "interface/output/ColorSensor",
+        "target": "interface/output/color"
+      },
+      {
+        "source": "interface/output/DetectionSensor",
+        "target": "interface/output/detections"
+      },
+      {
+        "source": "interface/input/teleport_command",
+        "target": "interface/input/rigid_command_carter"
+      }
+    ]
+  }
+}

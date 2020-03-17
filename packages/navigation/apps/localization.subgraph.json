@@ -1,0 +1,164 @@
+{
+  "modules": [
+    "navigation",
+    "utils",
+    "viewers"
+  ],
+  "graph": {
+    "nodes": [
+      {
+        "name": "subgraph",
+        "components": [
+          {
+            "name": "message_ledger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "interface",
+            "type": "isaac::alice::Subgraph"
+          }
+        ]
+      },
+      {
+        "name": "global_localization",
+        "components": [
+          {
+            "name": "message_ledger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "random",
+            "type": "isaac::alice::Random"
+          },
+          {
+            "name": "grid_search_localizer",
+            "type": "isaac::navigation::GridSearchLocalizer"
+          }
+        ]
+      },
+      {
+        "name": "scan_localization",
+        "components": [
+          {
+            "name": "message_ledger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "random",
+            "type": "isaac::alice::Random"
+          },
+          {
+            "name": "isaac.navigation.ParticleFilterLocalization",
+            "type": "isaac::navigation::ParticleFilterLocalization"
+          },
+          {
+            "name": "isaac.utils.Pose2GaussianDistributionEstimation",
+            "type": "isaac::utils::Pose2GaussianDistributionEstimation"
+          },
+          {
+            "name": "flatscan_viewer",
+            "type": "isaac::viewers::FlatscanViewer"
+          },
+          {
+            "name": "robot_viewer",
+            "type": "isaac::navigation::RobotViewer"
+          }
+        ]
+      },
+      {
+        "name": "localization_evaluation",
+        "components": [
+          {
+            "name": "isaac.navigation.LocalizationEvaluation",
+            "type": "isaac::navigation::LocalizationEvaluation"
+          }
+        ]
+      },
+      {
+        "name": "robot_pose_initializer",
+        "components": [
+          {
+            "name": "initial_pose",
+            "type": "isaac::alice::PoseInitializer"
+          }
+        ],
+        "start_order": -200
+      },
+      {
+        "name": "localize",
+        "components": [
+          {
+            "name": "isaac.navigation.LocalizeBehavior",
+            "type": "isaac::navigation::LocalizeBehavior"
+          },
+          {
+            "name": "isaac.alice.Behavior",
+            "type": "isaac::alice::Behavior"
+          }
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "source": "subgraph/interface/flatscan",
+        "target": "scan_localization/isaac.navigation.ParticleFilterLocalization/flatscan"
+      },
+      {
+        "source": "scan_localization/isaac.navigation.ParticleFilterLocalization/samples",
+        "target": "scan_localization/isaac.utils.Pose2GaussianDistributionEstimation/samples"
+      },
+      {
+        "source": "scan_localization/isaac.utils.Pose2GaussianDistributionEstimation/mean_and_covariance",
+        "target": "scan_localization/robot_viewer/pose_estimate"
+      },
+      {
+        "source": "subgraph/interface/flatscan",
+        "target": "scan_localization/flatscan_viewer/flatscan"
+      },
+      {
+        "source": "subgraph/interface/flatscan",
+        "target": "global_localization/grid_search_localizer/flatscan"
+      }
+    ]
+  },
+  "config": {
+    "localize": {
+      "isaac.navigation.LocalizeBehavior": {
+        "global_min_error": "$(fullname global_localization/grid_search_localizer/min_error)",
+        "global_progress": "$(fullname global_localization/grid_search_localizer/progress)",
+        "local_max_score": "$(fullname scan_localization/isaac.navigation.ParticleFilterLocalization/max_score)",
+        "tick_period": "50ms"
+      }
+    },
+    "global_localization": {
+      "grid_search_localizer": {
+        "tick_period": "250ms"
+      }
+    },
+    "scan_localization": {
+      "isaac.navigation.ParticleFilterLocalization": {
+        "output_best_percentile": 0.8
+      },
+      "isaac.utils.Pose2GaussianDistributionEstimation": {
+        "lhs_frame": "world",
+        "rhs_frame": "robot"
+      }
+    },
+    "localization_evaluation": {
+      "isaac.navigation.LocalizationEvaluation": {
+        "tick_period": "20Hz"
+      }
+    },
+    "robot_pose_initializer": {
+      "initial_pose": {
+        "attach_interactive_marker": true,
+        "lhs_frame": "world",
+        "pose": {
+          "rotation": { "yaw_degrees": 180 },
+          "translation": [25.0, 20.0, 0.0]
+        },
+        "rhs_frame": "robot_init"
+      }
+    }
+  }
+}

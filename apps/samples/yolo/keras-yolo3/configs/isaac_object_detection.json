@@ -1,0 +1,13 @@
+{
+  "app_filename": "apps/samples/yolo/yolo_training_ue4.app.json",
+  "log_dir": "~/yolo3_logs",
+  "classes_path": "apps/samples/yolo/keras-yolo3/model_data/object_classes_ue4.txt",
+  "anchors_path": "apps/samples/yolo/keras-yolo3/model_data/yolo_anchors.txt",
+  "lr_stage1": 1e-4,
+  "lr_stage2": 1e-5,
+  "gamma": 0.1,
+  "batch_size_stage1": 4,
+  "batch_size_stage2": 4,
+  "num_epochs_stage1": 20,
+  "num_epochs_total": 60
+}

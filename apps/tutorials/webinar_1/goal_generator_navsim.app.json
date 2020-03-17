@@ -1,0 +1,84 @@
+{
+  "name": "goal_generator_navsim",
+  "modules": [
+    "//apps/tutorials/webinar_1:goal_generator"
+  ],
+  "graph": {
+    "nodes": [
+      {
+        "name": "simulation",
+        "subgraph": "packages/navsim/apps/navsim.subgraph.json"
+      },
+      {
+        "name": "navigation",
+        "subgraph": "packages/navigation/apps/differential_base_navigation.subgraph.json"
+      },
+      {
+        "name": "goal_generator",
+        "components": [
+          {
+            "name": "message_ledger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "GoalGenerator",
+            "type": "isaac::tutorials::GoalGenerator"
+          }
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "source": "navigation.subgraph/interface/feedback",
+        "target": "goal_generator/GoalGenerator/feedback"
+      },
+      {
+        "source": "goal_generator/GoalGenerator/goal",
+        "target": "navigation.subgraph/interface/goal"
+      },
+      {
+        "source": "simulation.interface/output/flatscan",
+        "target": "navigation.subgraph/interface/flatscan_for_localization"
+      },
+      {
+        "source": "simulation.interface/output/flatscan",
+        "target": "navigation.subgraph/interface/flatscan_for_obstacles"
+      },
+      {
+        "source": "simulation.interface/output/base_state",
+        "target": "navigation.subgraph/interface/state"
+      },
+      {
+        "source": "navigation.subgraph/interface/command",
+        "target": "simulation.interface/input/base_command"
+      },
+      {
+        "source": "navigation.planner.global_plan_smoother/smoother/smooth_plan",
+        "target": "simulation.interface/sight/global_plan"
+      },
+      {
+        "source": "navigation.control.lqr/isaac.planner.DifferentialBaseLqrPlanner/plan",
+        "target": "simulation.interface/sight/local_plan"
+      }
+    ]
+  },
+  "config": {
+    "goal_generator" : {
+      "GoalGenerator" : {
+        "tick_period" : "10Hz"
+      }
+    },
+    "simulation.scan_flattener.scan_accumulator": {
+      "isaac.perception.ScanAccumulator": {
+        "min_slice_count": 900,
+        "clock_wise_rotation": false
+      }
+    },
+    "navigation.imu_odometry.odometry": {
+      "DifferentialBaseWheelImuOdometry": {
+        "use_imu": false
+      }
+    }
+  }
+}
+

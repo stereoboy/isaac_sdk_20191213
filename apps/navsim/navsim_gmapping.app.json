@@ -1,0 +1,126 @@
+{
+  "name": "gmapping",
+  "modules": [
+    "lidar_slam:g_mapping"
+  ],
+  "graph": {
+    "nodes": [
+      {
+        "name": "simulation",
+        "subgraph": "packages/navsim/apps/navsim.subgraph.json"
+      },
+      {
+        "name": "imu_odometry",
+        "subgraph": "packages/navigation/apps/differential_base_imu_odometry.subgraph.json"
+      },
+      {
+        "name": "local_map",
+        "subgraph": "packages/navigation/apps/local_map.subgraph.json"
+      },
+      {
+        "name": "commander",
+        "subgraph": "packages/navigation/apps/differential_base_commander.subgraph.json"
+      },
+      {
+        "name": "gmapping",
+        "components": [
+          {
+            "name": "ml",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "gmapping",
+            "type": "isaac::lidar_slam::GMapping"
+          }
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "source": "simulation.interface/noisy/flatscan",
+        "target": "gmapping/gmapping/flatscan"
+      },
+      {
+        "source": "simulation.interface/noisy/flatscan",
+        "target": "local_map.subgraph/interface/flatscan"
+      },
+      {
+        "source": "simulation.interface/output/base_state",
+        "target": "imu_odometry.subgraph/interface/state"
+      },
+      {
+        "source": "simulation.interface/output/imu_raw",
+        "target": "imu_odometry.subgraph/interface/imu_raw"
+      },
+      {
+        "source": "commander.subgraph/interface/command",
+        "target": "simulation.interface/input/base_command"
+      },
+      {
+        "source": "imu_odometry.subgraph/interface/odometry",
+        "target": "gmapping/gmapping/odometry"
+      }
+    ]
+  },
+  "config": {
+    "navigation.imu_odometry.odometry": {
+      "DifferentialBaseWheelImuOdometry": {
+        "use_imu": false
+      }
+    },
+    "local_map.local_map": {
+      "isaac.navigation.BinaryToDistanceMap": {
+        "obstacle_name": ""
+      }
+    },
+    "gmapping": {
+      "gmapping": {
+        "file_path": "/tmp",
+        "build_map_period": 1.0,
+        "laser_matcher_resolution": 0.017453,
+        "map_x_max": 10.0,
+        "map_x_min": -10.0,
+        "map_y_max": 10.0,
+        "map_y_min": -10.0,
+        "map_resolution": 0.05,
+        "max_range": 85.5,
+        "map_update_range": 85.0,
+        "number_particles": 50,
+        "linear_distance": 0.2,
+        "angular_distance": 0.08,
+        "use_pose_tree": false
+      }
+    },
+    "websight": {
+      "WebsightServer": {
+        "port": 3000,
+        "ui_config": {
+          "windows": {
+            "GMapping: Local View": {
+              "renderer": "2d",
+              "dims": {
+                "width": 256,
+                "height": 256
+              },
+              "channels": [
+                { "name": "gmapping/local_map.local_map/isaac.navigation.LocalMap/local_map" }
+              ]
+            },
+            "GMapping: Map View": {
+              "renderer": "2d",
+              "dims": {
+                "width": 432,
+                "height": 548
+              },
+              "channels": [
+                { "name": "gmapping/gmapping/gmapping/global_map" },
+                { "name": "gmapping/gmapping/gmapping/fov_cone" },
+                { "name": "gmapping/gmapping/gmapping/robot_pos" }
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

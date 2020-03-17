@@ -1,0 +1,120 @@
+{
+  "modules": [
+    "flatsim",
+    "navsim"
+  ],
+  "graph": {
+    "nodes": [
+      {
+        "name": "subgraph",
+        "components": [
+          {
+            "name": "message_ledger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "interface",
+            "type": "isaac::alice::Subgraph"
+          }
+        ]
+      },
+      {
+        "name": "noiser",
+        "subgraph": "packages/navsim/apps/sensor_noiser.subgraph.json"
+      },
+      {
+        "name": "base_simulation",
+        "components": [
+          {
+            "name": "isaac.flatsim.DifferentialBasePhysics",
+            "type": "isaac::flatsim::DifferentialBasePhysics"
+          },
+          {
+            "name": "isaac.flatsim.DifferentialBaseSimulator",
+            "type": "isaac::flatsim::DifferentialBaseSimulator"
+          },
+          {
+            "name": "random",
+            "type": "isaac::alice::Random"
+          },
+          {
+            "name": "message_ledger",
+            "type": "isaac::alice::MessageLedger"
+          }
+        ]
+      },
+      {
+        "name": "sim_range_scan",
+        "components": [
+          {
+            "name": "isaac.flatsim.SimRangeScan",
+            "type": "isaac::flatsim::SimRangeScan"
+          },
+          {
+            "name": "lidar_initializer",
+            "type": "isaac::alice::PoseInitializer"
+          },
+          {
+            "name": "message_ledger",
+            "type": "isaac::alice::MessageLedger"
+          }
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "source": "base_simulation/isaac.flatsim.DifferentialBaseSimulator/diff_base_state",
+        "target": "subgraph/interface/diff_base_state"
+      },
+      {
+        "source": "subgraph/interface/diff_base_command",
+        "target": "base_simulation/isaac.flatsim.DifferentialBaseSimulator/diff_base_command"
+      },
+      {
+        "source": "base_simulation/isaac.flatsim.DifferentialBaseSimulator/physics_actuation",
+        "target": "base_simulation/isaac.flatsim.DifferentialBasePhysics/command"
+      },
+      {
+        "source": "base_simulation/isaac.flatsim.DifferentialBasePhysics/bodies",
+        "target": "base_simulation/isaac.flatsim.DifferentialBaseSimulator/physics_bodies"
+      },
+      {
+        "source": "sim_range_scan/isaac.flatsim.SimRangeScan/flatscan",
+        "target": "noiser.lidar/flatscanNoiser/flatscan"
+      },
+      {
+        "source": "noiser.lidar/flatscanNoiser/noisy_flatscan",
+        "target": "subgraph/interface/flatscan"
+      }
+    ]
+  },
+  "config": {
+    "base_simulation": {
+      "isaac.flatsim.DifferentialBasePhysics": {
+        "tick_period": "100Hz"
+      },
+      "isaac.flatsim.DifferentialBaseSimulator": {
+        "tick_period": "100Hz"
+      }
+    },
+    "sim_range_scan": {
+      "isaac.flatsim.SimRangeScan": {
+        "num_beams": 900,
+        "tick_period": "50ms"
+      },
+      "lidar_initializer": {
+        "lhs_frame": "robot",
+        "pose": [
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          -0.04,
+          0.0,
+          0.0
+        ],
+        "rhs_frame": "lidar"
+      }
+    }
+  }
+}

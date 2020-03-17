@@ -1,0 +1,269 @@
+{
+  "modules": [
+    "map",
+    "navigation",
+    "planner",
+    "sight"
+  ],
+  "graph": {
+    "nodes": [
+      {
+        "name": "subgraph",
+        "components": [
+          {
+            "name": "message_ledger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "interface",
+            "type": "isaac::alice::Subgraph"
+          }
+        ]
+      },
+      {
+        "name": "local_map",
+        "subgraph": "packages/navigation/apps/local_map.subgraph.json"
+      },
+      {
+        "name": "go_to",
+        "subgraph": "packages/navigation/apps/go_to.subgraph.json"
+      },
+      {
+        "name": "planner",
+        "subgraph": "packages/navigation/apps/planner.subgraph.json"
+      },
+      {
+        "name": "control",
+        "subgraph": "packages/navigation/apps/differential_base_control.subgraph.json"
+      },
+      {
+        "name": "localization",
+        "subgraph": "packages/navigation/apps/localization.subgraph.json"
+      },
+      {
+        "name": "imu_odometry",
+        "subgraph": "packages/navigation/apps/differential_base_imu_odometry.subgraph.json"
+      },
+      {
+        "name": "obstacle_atlas",
+        "components": [
+          {
+            "name": "obstacle_atlas",
+            "type": "isaac::map::ObstacleAtlas"
+          }
+        ]
+      },
+      {
+        "name": "shared_robot_model",
+        "components": [
+          {
+            "name": "DifferentialBaseModel",
+            "type": "isaac::planner::DifferentialBaseModel"
+          },
+          {
+            "name": "RangeScanModel",
+            "type": "isaac::navigation::RangeScanModelFlatloc"
+          },
+          {
+            "name": "SphericalRobotShapeComponent",
+            "type": "isaac::planner::SphericalRobotShapeComponent"
+          }
+        ]
+      },
+      {
+        "name": "sight_widgets",
+        "components": [
+          {
+            "type": "isaac::sight::SightWidget",
+            "name": "3D View"
+          },
+          {
+            "type": "isaac::sight::SightWidget",
+            "name": "Map View"
+          },
+          {
+            "type": "isaac::sight::SightWidget",
+            "name": "Local View"
+          },
+          {
+            "type": "isaac::sight::SightWidget",
+            "name": "Speed Profile"
+          }
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "source": "subgraph/interface/goal",
+        "target": "planner.subgraph/interface/goal"
+      },
+      {
+        "source": "subgraph/interface/goal",
+        "target": "go_to.subgraph/interface/goal"
+      },
+      {
+        "source": "go_to.subgraph/interface/feedback",
+        "target": "subgraph/interface/feedback"
+      },
+      {
+        "source": "imu_odometry.subgraph/interface/odometry",
+        "target": "go_to.subgraph/interface/odometry"
+      },
+      {
+        "source": "imu_odometry.subgraph/interface/odometry",
+        "target": "control.subgraph/interface/odometry"
+      },
+      {
+        "source": "local_map.subgraph/interface/local_map",
+        "target": "planner.subgraph/interface/local_map"
+      },
+      {
+        "source": "local_map.subgraph/interface/local_map_lattice",
+        "target": "planner.subgraph/interface/local_map_lattice"
+      },
+      {
+        "source": "planner.subgraph/interface/plan",
+        "target": "control.subgraph/interface/plan"
+      },
+      {
+        "source": "subgraph/interface/flatscan_for_obstacles",
+        "target": "local_map.subgraph/interface/flatscan"
+      },
+      {
+        "source": "subgraph/interface/state",
+        "target": "imu_odometry.subgraph/interface/state"
+      },
+      {
+        "source": "subgraph/interface/imu_raw",
+        "target": "imu_odometry.subgraph/interface/imu_raw"
+      },
+      {
+        "source": "control.subgraph/interface/command",
+        "target": "subgraph/interface/command"
+      },
+      {
+        "source": "subgraph/interface/flatscan_for_localization",
+        "target": "localization.subgraph/interface/flatscan"
+      }
+    ]
+  },
+  "config": {
+    "shared_robot_model": {
+      "SphericalRobotShapeComponent": {
+        "circles": [
+          { "center": [0.0 ,0.0], "radius": 0.4},
+          { "center": [0.2 ,0.2], "radius": 0.2},
+          { "center": [0.2 ,-0.2], "radius": 0.2}
+        ]
+      }
+    },
+    "localization.scan_localization": {
+      "flatscan_viewer": {
+        "range_scan_model": "$(fullname shared_robot_model)"
+      },
+      "isaac.navigation.ParticleFilterLocalization": {
+        "range_scan_model": "$(fullname shared_robot_model)"
+      },
+      "robot_viewer": {
+        "robot_model": "$(fullname shared_robot_model/SphericalRobotShapeComponent)"
+      }
+    },
+    "planner.global_plan": {
+      "isaac.planner.GlobalPlanner": {
+        "robot_model": "$(fullname shared_robot_model)"
+      }
+    },
+    "go_to.goal_viewer": {
+      "GoalViewer": {
+        "robot_model": "$(fullname shared_robot_model)"
+      }
+    },
+    "go_to.move_until_arrival": {
+      "MoveUntilArrival": {
+        "navigation_mode": "$(fullname control.navigation_mode/isaac.navigation.GroupSelectorBehavior)"
+      }
+    },
+    "control.lqr": {
+      "isaac.planner.DifferentialBaseLqrPlanner": {
+        "robot_model": "$(fullname shared_robot_model/SphericalRobotShapeComponent)"
+      }
+    },
+    "localization.localize": {
+      "isaac.alice.Behavior": {
+        "aliases": [
+          "global_loc",
+          "local_loc",
+          "navigate"
+        ],
+        "nodes": [
+          "$(fullname localization.global_localization)",
+          "$(fullname localization.scan_localization)",
+          "$(fullname planner.global_plan)"
+        ]
+      }
+    },
+    "sight_widgets": {
+      "3D View": {
+        "type": "3d",
+        "channels": [
+          { "name": "map/occupancy/map" },
+          {
+            "name": "$(fullname local_map.local_map/isaac.navigation.LocalMap/local_map)",
+            "active": false
+          },
+          { "name": "$(fullname planner.global_plan/isaac.planner.GlobalPlanner/target)" },
+          { "name": "$(fullname planner.global_plan_smoother/smoother/smooth_plan.path)" },
+          { "name": "$(fullname control.lqr/isaac.planner.DifferentialBaseLqrPlanner/plan)" },
+          { "name": "$(fullname localization.scan_localization/robot_viewer/robot)" }
+        ]
+      },
+      "Map View": {
+        "type": "2d",
+        "channels": [
+          { "name": "map/occupancy/map" },
+          { "name": "map/waypoints/waypoints" },
+          { "name": "$(fullname local_map.local_map/isaac.navigation.LocalMap/local_map)" },
+          { "name": "$(fullname control.lqr/isaac.planner.DifferentialBaseLqrPlanner/plan)" },
+          {
+            "name": "map/restricted_area/polygons",
+            "active": false
+          },
+          {
+            "name": "$(fullname localization.global_localization/grid_search_localizer/error)",
+            "active": false
+          },
+          { "name": "$(fullname localization.scan_localization/flatscan_viewer/beam_lines)" },
+          { "name": "$(fullname localization.scan_localization/flatscan_viewer/beam_endpoints)" },
+          { "name": "$(fullname planner.global_plan/isaac.planner.GlobalPlanner/target)" },
+          { "name": "$(fullname planner.global_plan_smoother/smoother/smooth_plan.path)" },
+          {
+            "name": "$(fullname localization.scan_localization/isaac.navigation.ParticleFilterLocalization/particles)",
+            "active": false
+          },
+          { "name": "$(fullname localization.scan_localization/robot_viewer/robot)" }
+        ]
+      },
+      "Local View": {
+        "type": "2d",
+        "channels": [
+          { "name": "$(fullname local_map.local_map/isaac.navigation.LocalMap/local_map)" },
+          { "name": "$(fullname planner.global_plan/isaac.planner.GlobalPlanner/target)" },
+          { "name": "$(fullname planner.global_plan_smoother/smoother/smooth_plan.path)" },
+          { "name": "$(fullname localization.scan_localization/robot_viewer/robot_model)" },
+          { "name": "$(fullname localization.scan_localization/robot_viewer/trail)" },
+          { "name": "$(fullname localization.scan_localization/robot_viewer/covariance)" },
+          { "name": "$(fullname control.lqr/isaac.planner.DifferentialBaseLqrPlanner/plan)" }
+        ]
+      },
+      "Speed Profile": {
+        "type": "plot",
+        "channels": [
+          { "name": "$(fullname control.control/isaac.planner.DifferentialBaseControl/controller.commanded_speed)"},
+          { "name": "$(fullname control.control/isaac.planner.DifferentialBaseControl/controller.desired_speed)"},
+          { "name": "$(fullname imu_odometry.odometry/DifferentialBaseWheelImuOdometry/dynamics.estimated_speed)"},
+          { "name": "$(fullname imu_odometry.odometry/DifferentialBaseWheelImuOdometry/dynamics.observed_base_speed)"}
+        ]
+      }
+    }
+  }
+}

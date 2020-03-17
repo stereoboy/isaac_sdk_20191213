@@ -1,0 +1,64 @@
+{
+  "name": "subgraphs",
+  "graph": {
+    "nodes": [
+      {
+        "name": "group1",
+        "subgraph": "engine/alice/tests/transmission_not_connected.group.json"
+      },
+      {
+        "name": "pub",
+        "components": [
+          {
+            "name": "ledger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "pub",
+            "type": "isaac::alice::FooTransmitter"
+          }
+        ]
+      },
+      {
+        "name": "sub",
+        "components": [
+          {
+            "name": "ledger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "sub",
+            "type": "isaac::alice::FooReceiver"
+          }
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "source": "pub/pub/foo",
+        "target": "group1.sub_outside_group/sub/foo"
+      },
+      {
+        "source": "group1.pub_outside_group/pub/foo",
+        "target": "sub/sub/foo"
+      }
+    ]
+  },
+  "config": {
+    "pub": {
+      "pub": {
+        "offset": 47,
+        "tick_period": "100ms",
+        "expected_tick_count": 6,
+        "expected_tick_count_tolerance": 1
+      }
+    },
+    "sub": {
+      "sub": {
+        "offset": 47,
+        "expected_tick_count": 6,
+        "expected_tick_count_tolerance": 1
+      }
+    }
+  }
+}

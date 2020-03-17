@@ -1,0 +1,93 @@
+{
+  "A_CarterGroup": {
+    "ActorGroup": {
+      "actors": [
+        {
+          "name": "carter_1",
+          "reference": "Blueprint'/Game/Actors/CubeActor.CubeActor'",
+          "pose": [1, 0, 0, 0, -11.01, 63.47, 0.92]
+        },
+        {
+          "name": "bp_controller",
+          "reference": "Blueprint'/Game/Blueprints/IsaacSimController_BP.IsaacSimController_BP'",
+          "pose": [1, 0, 0, 0, 0, 0, 0],
+          "spawn_config": {
+            "blueprint_variables": [
+              {
+                "properties": [
+                  {
+                    "name": "bDisableRendering",
+                    "value": false,
+                    "type": "bool"
+                  },
+                  {
+                    "name": "bSetFixedFrameRate",
+                    "value": true,
+                    "type": "bool"
+                  },
+                  { "name": "FixedFrameRate", "value": 60, "type": "float" }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "A_SphereGroup": {
+    "ActorGroup": {
+      "actors": [
+        {
+          "name": "sphere",
+          "reference": "Blueprint'/Game/Actors/SphereActor.SphereActor'",
+          "pose": [1, 0, 0, 0, -11.01, 63.47, 0.92]
+        }
+      ]
+    }
+  },
+  "CarterLeftCamera": {
+    "CameraComponent": {
+      "parent_actor": "carter_1",
+      "parent_T_camera": [1, 0, 0, 0, 0.11, 0.7, 0.31],
+      "cols": 512,
+      "rows": 256,
+      "enable_rgb": true,
+      "enable_depth": false,
+      "enable_segmentation": true,
+      "min_depth": 0,
+      "max_depth": 100.0,
+      "segmentation_classes": {
+        "static_mesh": [
+          {
+            "name": "box"
+          },
+          {
+            "name": "floor"
+          },
+          {
+            "name": "wall"
+          },
+          {
+            "name": "rack"
+          },
+          {
+            "name": "Sphere"
+          },
+          {
+            "name": "character"
+          }
+        ]
+      }
+    }
+  },
+  "TimeSyncedTcpConnections": {
+    "LeftCameraPublisher": {
+      "port": 5003,
+      "host": "localhost"
+    },
+    "ActorGroupRigidCommandSubscriber": {
+      "port": 5004,
+      "host": "localhost"
+    }
+  }
+}

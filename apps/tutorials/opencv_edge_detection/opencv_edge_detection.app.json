@@ -1,0 +1,103 @@
+{
+  "name": "opencv_edge_detection",
+  "modules": [
+      "//apps/tutorials/opencv_edge_detection:edge_detector",
+      "sensors:v4l2_camera",
+      "viewers"
+  ],
+  "config": {
+    "v4l2_camera": {
+      "driver": {
+        "device_id": 0,
+        "rows": 448,
+        "cols": 800,
+        "rate_hz": 30
+      }
+    },
+    "websight": {
+      "WebsightServer": {
+        "port": 3000,
+        "ui_config": {
+          "windows": {
+            "Edge Detection": {
+              "renderer": "2d",
+              "dims": {
+                "width": 1344,
+                "height": 376
+              },
+              "channels": [
+                {
+                  "name": "opencv_edge_detection/edge_detector/viewer/Color"
+                }
+              ]
+            },
+            "Original Image": {
+              "renderer": "2d",
+              "dims": {
+                "width": 1344,
+                "height": 376
+              },
+              "channels": [
+                {
+                  "name": "opencv_edge_detection/v4l2_camera/viewer/Color"
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  },
+  "graph": {
+    "nodes": [
+      {
+        "name": "v4l2_camera",
+        "components": [
+          {
+            "name": "message_ledger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "driver",
+            "type": "isaac::V4L2Camera"
+          },
+          {
+            "name": "viewer",
+            "type": "isaac::viewers::ColorCameraViewer"
+          }
+        ]
+      },
+      {
+        "name": "edge_detector",
+        "components": [
+          {
+            "name": "message_ledger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "edge_detector",
+            "type": "isaac::opencv::EdgeDetector"
+          },
+          {
+            "name": "viewer",
+            "type": "isaac::viewers::ColorCameraViewer"
+          }
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "source": "v4l2_camera/driver/frame",
+        "target": "edge_detector/edge_detector/input_image"
+      },
+      {
+        "source": "v4l2_camera/driver/frame",
+        "target": "v4l2_camera/viewer/color_listener"
+      },
+      {
+        "source": "edge_detector/edge_detector/output_image",
+        "target": "edge_detector/viewer/color_listener"
+      }
+    ]
+  }
+}

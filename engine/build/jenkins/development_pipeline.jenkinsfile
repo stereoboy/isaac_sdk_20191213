@@ -1,0 +1,278 @@
+// ISAAC SDK Development Pipeline
+//
+// This will take care of building and doing basic tests for merge requests
+// It will help to give developers faster feedback and for code reviewers
+// to verify the compliance of the commit
+//
+// Copyright (c) 2019, NVIDIA CORPORATION. All rights reserved.
+//
+// NVIDIA CORPORATION and its licensors retain all intellectual property
+// and proprietary rights in and to this software, related documentation
+// and any modifications thereto. Any use, reproduction, disclosure or
+// distribution of this software and related documentation without an express
+// license agreement from NVIDIA CORPORATION is strictly prohibited.
+
+
+// Call gerrit over SSH and set the verified score of the CL along with a status message
+def set_gerrit_verified( String score="0", String gerritMessage = "Not verified" ) {
+    withCredentials([
+        sshUserPrivateKey(
+            credentialsId: env.CREDENTIALS_ID,
+            keyFileVariable: 'SSH_CREDENTIALS_FILE',
+            usernameVariable: 'SSH_CREDENTIALS_USER'
+        )
+    ]) {
+        sh "ssh -i '$SSH_CREDENTIALS_FILE' \
+        -o StrictHostKeyChecking=no \
+        -p 29418 ${SSH_CREDENTIALS_USER}@${env.GERRIT_SERVER} \
+        gerrit review \
+            --label \\'CI-Verified=${score}\\' \
+            --message \\'${gerritMessage}\\' \
+            -n OWNER \
+            ${params.GERRIT_CHANGE_NUMBER},${params.GERRIT_PATCHSET_NUMBER}"
+    }
+}
+
+def run_in_ci_docker(String command, Boolean nvidia_runtime=false) {
+    script {
+        def isaac_build_container = docker.build('isaacbuild', '-f engine/build/docker/Dockerfile engine/build')
+        def runtime = ''
+        if(nvidia_runtime) {
+            runtime = '--runtime=nvidia'
+        }
+        isaac_build_container.inside("${DOCKER_ARGUMENTS} ${runtime}") {
+            dir(HOME) {
+                dir(WORKSPACE) {
+                    sh "echo build --remote_http_cache=${env.BAZEL_CACHE} > ~/.bazelrc"
+                    sh command
+                    try {
+                        junit 'bazel-testlogs/**/test.xml'
+                    } catch (Exception e) {
+                        println("No JUnit tests added: ${e.getMessage()}")
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Sends a notification to Slack
+// color: The color to use on to hightlight the message.
+//  can be one of: 'good', 'warning', 'danger', or an hex color code
+// message: Content of the message
+// channel: String for message destination. Can be a #channel or a @username
+def slack_notify(String color="warning", message = "Build finished", channel = "#rdk-team-ci") {
+    status = currentBuild.currentResult.toLowerCase()
+    try {
+        slackSend(
+            message: message,
+            attachments: """[
+                {
+                "color": "${color}",
+                "fallback": "Build ${status}: ${BUILD_URL}",
+                "actions": [
+                    {
+                        "type": "button",
+                        "text": "See build log",
+                        "url": "${BUILD_URL}console#footer"
+                    },
+                    {
+                        "type": "button",
+                        "text": "See commit",
+                        "url": "${get_cl_url()}"
+                    }
+                ]
+                }
+            ]
+            """,
+            channel: channel
+        )
+    }
+    catch (Exception e) {
+        emailext (
+            to: env.CI_EMAIL_NOTICE_DESTINATARY,
+            subject: "[CI-CD][ISAAC] Slack notifications failing",
+            mimeType: 'text/html',
+            body: """
+            <html>
+                <body>
+                    <h1>
+                        Slack notifications are failing
+                    </h1>
+                    <p>
+                        <dl>
+                            <dt>Build URL</dt>
+                            <dd>
+                                <a href="${env.BUILD_URL}">
+                                    ${env.JOB_NAME}
+                                    [${env.BUILD_NUMBER}]
+                                </a>
+                            </dd>
+                            <dt>Original message</dt>
+                            <dd><code>${message}</code></dd>
+                        </dl>
+                    </p>
+                </body>
+            </html>
+            """
+        )
+    }
+}
+
+def get_cl_url() {
+    return "https://${GERRIT_SERVER}/r/#/c/${params.GERRIT_CHANGE_NUMBER}/${params.GERRIT_PATCHSET_NUMBER}"
+}
+
+def send_email_notification( String destinataries ) {
+    emailext (
+        to: destinataries,
+        subject: "[CI-CD][Isaac][Errors] ${params.GERRIT_CHANGE_NUMBER}",
+        mimeType: 'text/html',
+        body: """
+        <html>
+            <body>
+                <h1>
+                    Build was cancelled.
+                </h1>
+                <p>
+                    You can view the console output
+                    at <a href='${env.BUILD_URL}console#footer'>
+                        ${env.JOB_NAME}
+                        [${env.BUILD_NUMBER}]
+                    </a> or
+                    <a href='${get_cl_url()}'>
+                        review the CL
+                    </a>
+                </p>
+            </body>
+        </html>
+        """
+    )
+}
+pipeline {
+    agent {
+        node {
+            label 'isaac && gpu'
+        }
+    }
+    environment {
+        GERRIT_SERVER="git-master.nvidia.com"
+        CREDENTIALS_ID="isaac-git-master"
+        BAZEL_CACHE="http://isaac-sdk-build-01.nvidia.com:8080"
+        CI_EMAIL_NOTICE_DESTINATARY = "isacc-sdk-ci@exchange.nvidia.com"
+        DOCKER_ARGUMENTS='-e HOME=/tmp -v /etc/passwd:/etc/passwd:ro'
+        SCORE=0
+    }
+    parameters {
+        string(
+            name: 'GERRIT_CHANGE_NUMBER',
+            description: "The Gerrit Change number"
+        )
+        string(
+            name: 'GERRIT_PATCHSET_NUMBER',
+            description: "The Gerrit patchSet number"
+        )
+        string(
+            name: 'REF',
+            description: "Branch to build. Use a branch name or full REF",
+        )
+    }
+    options {
+        ansiColor('xterm')
+        timestamps()
+        timeout(time: 1, unit: 'HOURS')
+    }
+    stages {
+        stage("Validate arguments") {
+            steps {
+                script {
+                    if(!params.GERRIT_CHANGE_NUMBER || !params.GERRIT_PATCHSET_NUMBER ) {
+                        error("Missing parameters")
+                    }
+                    env.GIT_AUTHOR = sh(
+                        script: 'git show -s --format=%ae | sed "s/@nvidia\\.com//"',
+                        returnStdout: true
+                    )
+                    env.GIT_SHORT = sh(script: 'git show -s -1 --format=%s', returnStdout: true)
+                }
+            }
+        }
+        stage("Lint") {
+            steps {
+                run_in_ci_docker 'bazel test --config=lint ...'
+            }
+            post {
+                failure {
+                    set_gerrit_verified("-1", "❌ Linter checks failed. ${BUILD_URL}console#footer")
+                    slack_notify(
+                        "danger",
+                        "❌ ${env.GIT_SHORT} failed linter checks",
+                        "@${env.GIT_AUTHOR}"
+                    )
+                }
+            }
+        }
+        stage("Build") {
+            steps {
+                run_in_ci_docker "bazel build ..."
+            }
+            post {
+                failure {
+                    set_gerrit_verified("-1", "❌ Build errors. ${BUILD_URL}console#footer")
+                    slack_notify("danger", "❌ ${env.GIT_SHORT} not built", "@${env.GIT_AUTHOR}")
+                    script {
+                        env.SCORE=-1
+                    }
+                }
+            }
+        }
+        stage("Test") {
+            steps {
+                run_in_ci_docker("bazel test ... ; bazel test ... --jobs 1", true)
+            }
+            post {
+                failure {
+                    set_gerrit_verified("-1", "❌ Build failed tests. ${BUILD_URL}console#footer")
+                    slack_notify("danger", "❌ ${env.GIT_SHORT} failed tests", "@${env.GIT_AUTHOR}")
+                    script {
+                        env.SCORE=-1
+                    }
+                }
+            }
+        }
+        stage("Run Evaluation") {
+            steps {
+                build job: 'evaluation', wait: false, parameters: [
+                    string(name: 'REF', value: params.REF)
+                ]
+            }
+        }
+    }
+    post {
+        always {
+            cleanWs()
+        }
+        success {
+            set_gerrit_verified("+1", "✅ Build successful. ${BUILD_URL}")
+            slack_notify("good", "✅ ${env.GIT_SHORT} Build successful", "@${env.GIT_AUTHOR}")
+        }
+        failure {
+            script {
+                if(env.SCORE == 0) {
+                    set_gerrit_verified(
+                        "-1",
+                        "❌ Failed to provide score. See log for details ${BUILD_URL}console#footer"
+                    )
+                    slack_notify(
+                        "danger",
+                        "❌ Failed to provide score for ${env.GIT_SHORT}",
+                        '#isaac-sdk-ci'
+                    )
+                }
+            }
+        }
+        aborted {
+            send_email_notification(env.CI_EMAIL_NOTICE_DESTINATARY)
+        }
+    }
+}

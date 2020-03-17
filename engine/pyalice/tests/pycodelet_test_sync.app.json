@@ -1,0 +1,47 @@
+{
+  "name": "pycodelet_test_sync",
+  "modules": [
+    "//engine/pyalice/tests:components",
+    "message_generators"
+  ],
+  "graph": {
+    "nodes": [
+      {
+        "name": "py_producer",
+        "components": [
+          {
+            "name": "message_ledger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "isaac.alice.PyCodelet",
+            "type": "isaac::alice::PyCodelet"
+          }
+        ]
+      },
+      {
+        "name": "py_consumer",
+        "components": [
+          {
+            "name": "message_ledger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "isaac.alice.PyCodelet",
+            "type": "isaac::alice::PyCodelet"
+          }
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "source": "py_producer/isaac.alice.PyCodelet/pose",
+        "target": "py_consumer/isaac.alice.PyCodelet/pose"
+      },
+      {
+        "source": "py_producer/isaac.alice.PyCodelet/pose2",
+        "target": "py_consumer/isaac.alice.PyCodelet/pose2"
+      }
+    ]
+  }
+}

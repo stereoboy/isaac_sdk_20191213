@@ -1,0 +1,117 @@
+{
+  "name": "kinova_jaco",
+  "modules": [
+    "kinova_jaco",
+    "//apps/samples/kinova_jaco:sample_controller",
+    "//apps/samples/kinova_jaco:sample_publisher"
+  ],
+  "graph": {
+    "nodes": [
+      {
+        "name": "kinova_jaco",
+        "components": [
+          {
+            "name": "message_ledger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "kinova_jaco",
+            "type": "isaac::kinova_jaco::KinovaJaco"
+          },
+          {
+            "name": "publisher",
+            "type": "isaac::kinova_jaco::KinovaJacoSamplePublisher"
+          },
+          {
+            "name": "controller",
+            "type": "isaac::kinova_jaco::KinovaJacoSampleController"
+          }
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "source": "kinova_jaco/kinova_jaco/cartesian_pose",
+        "target": "kinova_jaco/publisher/cartesian_pose"
+      },
+      {
+        "source": "kinova_jaco/controller/cartesian_pose_command",
+        "target": "kinova_jaco/kinova_jaco/cartesian_pose_command"
+      }
+    ]
+  },
+  "config": {
+    "kinova_jaco": {
+      "kinova_jaco": {
+        "control_mode": "cartesian pose",
+        "kinova_jaco_sdk_path": "/opt/JACO2SDK/API/",
+        "tick_period": "5ms"
+      },
+      "controller": {
+        "tick_period": "5.0"
+      }
+    },
+    "websight": {
+      "WebsightServer": {
+        "port": 3000,
+        "ui_config": {
+          "windows": {
+            "End Effector Position": {
+              "renderer": "plot",
+              "dims": {
+                "width": 1000,
+                "height": 500
+              },
+              "channels": [
+                {
+                  "name": "KinovaJaco/kinova_jaco/publisher/px",
+                  "active": true,
+                  "color": "#ff0000"
+                },
+                {
+                  "name": "KinovaJaco/kinova_jaco/publisher/py",
+                  "active": true,
+                  "color": "#00ff00"
+                },
+                {
+                  "name": "KinovaJaco/kinova_jaco/publisher/pz",
+                  "active": true,
+                  "color": "#0000ff"
+                }
+              ]
+            },
+            "End Effector Pose": {
+              "renderer": "plot",
+              "dims": {
+                "width": 1000,
+                "height": 500
+              },
+              "channels": [
+                {
+                  "name": "KinovaJaco/kinova_jaco/publisher/qx",
+                  "active": true,
+                  "color": "#ff0000"
+                },
+                {
+                  "name": "KinovaJaco/kinova_jaco/publisher/qy",
+                  "active": true,
+                  "color": "#00ff00"
+                },
+                {
+                  "name": "KinovaJaco/kinova_jaco/publisher/qz",
+                  "active": true,
+                  "color": "#0000ff"
+                },
+                {
+                  "name": "KinovaJaco/kinova_jaco/publisher/qw",
+                  "active": true,
+                  "color": "#ff00ff"
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

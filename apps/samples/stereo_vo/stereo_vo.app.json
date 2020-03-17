@@ -1,0 +1,142 @@
+{
+  "name": "stereo_vo",
+  "modules": [
+    "perception:stereo_visual_odometry",
+    "viewers",
+    "zed"
+  ],
+  "config": {
+    "zed": {
+      "zed_camera": {
+        "resolution": "672x376",
+        "gray_scale": true,
+        "rgb": false,
+        "enable_factory_rectification": true,
+        "capture_imu_data": true,
+        "tick_period": "60Hz"
+      },
+      "zed_imu_reader": {
+        "tick_period": "300Hz"
+      }
+    },
+    "stereo_vo": {
+      "stereo_vo": {
+        "horizontal_stereo_camera": true,
+        "enable_imu": true
+      }
+    },
+    "websight": {
+      "WebsightServer": {
+        "port": 3000,
+        "ui_config": {
+          "windows": {
+            "left camera": {
+              "renderer": "2d",
+              "channels": [
+                {
+                  "name": "stereo_vo/zed/zed_camera/left_gray_thumbnail",
+                  "active": true
+                }
+              ]
+            },
+            "right camera": {
+              "renderer": "2d",
+              "channels": [
+                {
+                  "name": "stereo_vo/zed/zed_camera/right_gray_thumbnail",
+                  "active": true
+                }
+              ]
+            },
+            "Camera Pose": {
+              "renderer": "3d",
+              "dims": {
+                "width": 1100,
+                "height": 450
+              },
+              "channels": [
+                {
+                  "name": "stereo_vo/stereo_vo/stereo_vo/current_pose",
+                  "active": true
+                },
+                {
+                  "name": "stereo_vo/stereo_vo/stereo_vo/pose_trail",
+                  "active": true
+                }
+              ]
+            },
+            "xy": {
+              "renderer": "plot",
+              "channels": [
+                { "name": "stereo_vo/stereo_vo/stereo_vo/vo.pos_x" },
+                { "name": "stereo_vo/stereo_vo/stereo_vo/vo.pos_y" }
+              ]
+            },
+            "up": {
+              "renderer": "plot",
+              "channels": [
+                { "name": "stereo_vo/stereo_vo/stereo_vo/vo.pos_z" }
+              ]
+            }
+          }
+        }
+      }
+    }
+  },
+  "graph": {
+    "nodes": [
+      {
+        "name": "zed",
+        "components": [
+          {
+            "name": "message_ledger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "zed_camera",
+            "type": "isaac::ZedCamera"
+          },
+          {
+            "name": "zed_imu_reader",
+            "type": "isaac::zed::ZedImuReader"
+          }
+        ]
+      },
+      {
+        "name": "stereo_vo",
+        "components": [
+          {
+            "name": "message_ledger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "stereo_vo",
+            "type": "isaac::StereoVisualOdometry"
+          }
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "source": "zed/zed_camera/left_camera_gray",
+        "target": "stereo_vo/stereo_vo/left"
+      },
+      {
+        "source": "zed/zed_camera/right_camera_gray",
+        "target": "stereo_vo/stereo_vo/right"
+      },
+      {
+        "source": "zed/zed_camera/extrinsics",
+        "target": "stereo_vo/stereo_vo/extrinsics"
+      },
+      {
+        "source": "zed/zed_imu_reader/imu_raw",
+        "target": "stereo_vo/stereo_vo/imu"
+      },
+      {
+        "source": "zed/zed_imu_reader/imu_T_left_camera",
+        "target": "stereo_vo/stereo_vo/imu_T_left_camera"
+      }
+    ]
+  }
+}

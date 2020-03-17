@@ -1,0 +1,4 @@
+{
+  "graphs": ["apps/samples/mosaic/bridge_config/mosaic_sim.graph.json"],
+  "configs": ["apps/samples/mosaic/bridge_config/mosaic_sim.config.json"]
+}

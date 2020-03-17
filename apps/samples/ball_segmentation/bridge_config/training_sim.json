@@ -1,0 +1,4 @@
+{
+  "graphs": ["apps/samples/ball_segmentation/bridge_config/training_sim.graph.json"],
+  "configs": ["apps/samples/ball_segmentation/bridge_config/training_sim.config.json"]
+}

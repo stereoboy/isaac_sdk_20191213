@@ -1,0 +1,50 @@
+{
+  "config": {
+    "websight": {
+      "WebsightServer": {
+        "port": 3001
+      }
+    },
+    "navigation.localization.localize": {
+      "disable_automatic_start": false
+    },
+    "simulation.scenario_manager": {
+      "disable_automatic_start": true
+    },
+    "goals.goal_behavior": {
+      "isaac.navigation.SelectorBehavior": {
+        "desired_behavior": "patrol"
+      }
+    },
+    "simulation.interface": {
+      "input": {
+        "port": 55011
+      },
+      "output": {
+        "port": 55010,
+        "host": "localhost"
+      }
+    },
+    "goals.patrol": {
+      "isaac.navigation.Patrol": {
+        "route": [
+          "pickup0",
+          "delivery0"
+        ],
+        "wait_time": 0
+      }
+    },
+    "navigation.control.lqr": {
+      "isaac.planner.DifferentialBaseLqrPlanner": {
+        "speed_gradient_target_distance": 3.0,
+        "target_distance": 0.25
+      }
+    },
+    "navigation.control.lqr": {
+      "isaac.planner.DifferentialBaseLqrPlanner": {
+        "max_speed": 0.45,
+        "max_angular_speed": 0.6
+      }
+    }
+  }
+}

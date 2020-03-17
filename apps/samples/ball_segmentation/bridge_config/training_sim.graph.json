@@ -1,0 +1,82 @@
+{
+  "nodes": [
+    {
+      "name": "A_CarterGroup",
+      "components": [
+        {
+          "name": "MessageLedger",
+          "type": "isaac::alice::MessageLedger"
+        },
+        {
+          "name": "ActorGroup",
+          "type": "isaac::sim_bridge::ActorGroup"
+        }
+      ]
+    },
+    {
+      "name": "A_SphereGroup",
+      "components": [
+        {
+          "name": "MessageLedger",
+          "type": "isaac::alice::MessageLedger"
+        },
+        {
+          "name": "ActorGroup",
+          "type": "isaac::sim_bridge::ActorGroup"
+        }
+      ]
+    },
+    {
+      "name": "CarterLeftCamera",
+      "components": [
+        {
+          "name": "isaac.alice.MessageLedger",
+          "type": "isaac::alice::MessageLedger"
+        },
+        {
+          "name": "CameraComponent",
+          "type": "isaac::sim_bridge::Camera"
+        }
+      ]
+    },
+    {
+      "name": "TimeSyncedTcpConnections",
+      "components": [
+        {
+          "name": "TimeSynchronizer",
+          "type": "isaac::alice::TimeSynchronizer"
+        },
+        {
+          "name": "isaac.alice.MessageLedger",
+          "type": "isaac::alice::MessageLedger"
+        },
+        {
+          "name": "LeftCameraPublisher",
+          "type": "isaac::alice::TcpPublisher"
+        },
+        {
+          "name": "ActorGroupRigidCommandSubscriber",
+          "type": "isaac::alice::TcpSubscriber"
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "source": "CarterLeftCamera/CameraComponent/color_image",
+      "target": "TimeSyncedTcpConnections/LeftCameraPublisher/ColorSensor"
+    },
+    {
+      "source": "CarterLeftCamera/CameraComponent/segmentation_image",
+      "target": "TimeSyncedTcpConnections/LeftCameraPublisher/SegmentationSensor"
+    },
+    {
+      "source": "TimeSyncedTcpConnections/ActorGroupRigidCommandSubscriber/rigid_command_carter",
+      "target": "A_CarterGroup/ActorGroup/rigid_command"
+    },
+    {
+      "source": "TimeSyncedTcpConnections/ActorGroupRigidCommandSubscriber/rigid_command_sphere",
+      "target": "A_SphereGroup/ActorGroup/rigid_command"
+    }
+  ]
+}

@@ -1,0 +1,165 @@
+
+{
+    "name": "mosaic",
+    "modules": [
+      "message_generators",
+      "viewers"
+    ],
+    "config": {
+      "plan_generator": {
+        "isaac.message_generators.Plan2Generator": {
+          "tick_period": "5hz"
+        }
+      },
+      "websight": {
+        "WebsightServer": {
+          "port": 3000,
+          "ui_config": {
+            "windows": {
+              "Mosaic Segmentation - SampleAccumulatorViewer": {
+                "renderer": "2d",
+                "dims": {
+                  "width": 512,
+                  "height": 256
+                },
+                "channels": [
+                  {
+                    "name": "mosaic/mosaic_samples/isaac.viewers.SampleAccumulatorViewer/Mosaic",
+                    "active": true
+                  }
+                ]
+              },
+              "Mosaic - SampleAccumulator profile": {
+                "renderer": "plot",
+                "dims": {
+                  "width": 640,
+                  "height": 480
+                },
+                "channels": [
+                  {
+                    "name": "mosaic/mosaic_samples/isaac.ml.SampleAccumulator/sps"
+                  },
+                  {
+                    "name": "mosaic/mosaic_samples/isaac.viewers.SampleAccumulatorViewer/peak_size"
+                  }
+                ]
+              }
+            },
+            "assets": {}
+          }
+        }
+      }
+    },
+    "graph": {
+      "nodes": [
+        {
+          "name": "plan_generator",
+          "components": [
+            {
+              "name": "message_ledger",
+              "type": "isaac::alice::MessageLedger"
+            },
+            {
+              "name": "isaac.message_generators.Plan2Generator",
+              "type": "isaac::message_generators::Plan2Generator"
+            }
+          ]
+        },
+        {
+          "name": "proto_to_json",
+          "components": [
+            {
+              "name": "message_ledger",
+              "type": "isaac::alice::MessageLedger"
+            },
+            {
+              "name": "isaac.alice.ProtoToJson",
+              "type": "isaac::alice::ProtoToJson"
+            }
+          ]
+        },
+        {
+          "name": "json_to_proto",
+          "components": [
+            {
+              "name": "message_ledger",
+              "type": "isaac::alice::MessageLedger"
+            },
+            {
+              "name": "isaac.alice.JsonToProto",
+              "type": "isaac::alice::JsonToProto"
+            }
+          ]
+        },
+        {
+          "name": "test_node",
+          "components": [
+            {
+              "name": "message_ledger",
+              "type": "isaac::alice::MessageLedger"
+            },
+            {
+              "name": "isaac.alice.ProtoMessageTestCodelet",
+              "type": "isaac::alice::ProtoMessageTestCodelet"
+            }
+          ]
+        },
+        {
+          "name": "proto_to_json2",
+          "components": [
+            {
+              "name": "message_ledger",
+              "type": "isaac::alice::MessageLedger"
+            },
+            {
+              "name": "isaac.alice.ProtoToJson",
+              "type": "isaac::alice::ProtoToJson"
+            }
+          ]
+        },
+        {
+          "name": "json_test_node",
+          "components": [
+            {
+              "name": "message_ledger",
+              "type": "isaac::alice::MessageLedger"
+            },
+            {
+              "name": "isaac.alice.JsonMessageTestCodelet",
+              "type": "isaac::alice::JsonMessageTestCodelet"
+            }
+          ]
+        }
+      ],
+      "edges": [
+        {
+          "source": "plan_generator/isaac.message_generators.Plan2Generator/plan",
+          "target": "proto_to_json/isaac.alice.ProtoToJson/proto"
+        },
+        {
+          "source": "proto_to_json/isaac.alice.ProtoToJson/json",
+          "target": "json_to_proto/isaac.alice.JsonToProto/json"
+        },
+        {
+          "source": "plan_generator/isaac.message_generators.Plan2Generator/plan",
+          "target": "test_node/isaac.alice.ProtoMessageTestCodelet/proto1"
+        },
+        {
+          "source": "json_to_proto/isaac.alice.JsonToProto/proto",
+          "target": "test_node/isaac.alice.ProtoMessageTestCodelet/proto2"
+        },
+        {
+          "source": "json_to_proto/isaac.alice.JsonToProto/proto",
+          "target": "proto_to_json2/isaac.alice.ProtoToJson/proto"
+        },
+        {
+          "source": "proto_to_json/isaac.alice.ProtoToJson/json",
+          "target": "json_test_node/isaac.alice.JsonMessageTestCodelet/json1"
+        },
+        {
+          "source": "proto_to_json2/isaac.alice.ProtoToJson/json",
+          "target": "json_test_node/isaac.alice.JsonMessageTestCodelet/json2"
+        }
+      ]
+    }
+  }

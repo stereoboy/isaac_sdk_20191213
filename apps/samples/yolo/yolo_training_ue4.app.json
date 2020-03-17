@@ -1,0 +1,84 @@
+{
+  "name": "yolo_training_ue4",
+  "modules": [
+    "sight"
+  ],
+  "config": {
+    "camera_teleportation": {
+      "isaac.ml.Teleportation": {
+        "interval": 1.0,
+        "name": "carter_1",
+        "min": [
+          -25.8,
+          60.2,
+          0.2
+        ],
+        "max": [
+          4.8,
+          65.2,
+          0.5
+        ],
+        "min_yaw": -3.14,
+        "max_yaw": 3.14,
+        "enable_translation_x": true,
+        "enable_translation_y": true,
+        "enable_translation_z": true,
+        "enable_yaw": true,
+        "tick_period": "5hz"
+      }
+    },
+    "websight": {
+      "WebsightServer": {
+        "port": 3000,
+        "ui_config": {
+          "windows": {
+            "Object Detection - Color": {
+              "renderer": "2d",
+              "dims": {
+                "width": 512,
+                "height": 256
+              },
+              "channels": [
+                {
+                  "name": "yolo_training_ue4/yolo_training.color_camera_visualizer/isaac.viewers.ColorCameraViewer/Color",
+                  "active": true
+                },
+                {
+                  "name": "yolo_training_ue4/yolo_training.bounding_box_visualizer/isaac.viewers.DetectionsViewer/detections",
+                  "active": true
+                }
+              ]
+            }
+          },
+          "assets": {}
+        }
+      }
+    }
+  },
+  "graph": {
+    "nodes": [
+      {
+        "name": "simulation",
+        "subgraph": "apps/samples/yolo/ue4sim.subgraph.json"
+      },
+      {
+        "name": "yolo_training",
+        "subgraph": "apps/samples/yolo/yolo_training.subgraph.json"
+      }
+    ],
+    "edges": [
+      {
+        "source": "simulation.interface/output/color",
+        "target": "yolo_training.interface/subgraph/color"
+      },
+      {
+        "source": "simulation.interface/output/detections",
+        "target": "yolo_training.interface/subgraph/detections"
+      },
+      {
+        "source": "yolo_training.interface/subgraph/teleport_command",
+        "target": "simulation.interface/input/teleport_command"
+      }
+    ]
+  }
+}

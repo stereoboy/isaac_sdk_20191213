@@ -1,0 +1,6 @@
+bazel-bin
+bazel-genfiles
+bazel-isaac_sdk_20191213
+bazel-out
+bazel-testlogs
+*.so

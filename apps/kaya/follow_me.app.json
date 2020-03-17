@@ -1,0 +1,204 @@
+{
+  "name": "follow_me",
+  "modules": [
+    "map",
+    "navigation",
+    "perception:april_tags",
+    "perception",
+    "planner",
+    "viewers"
+  ],
+  "graph": {
+    "nodes": [
+      {
+        "name": "april_tags_detection",
+        "components": [
+          {
+            "name": "isaac.alice.MessageLedger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "isaac.perception.AprilTagsDetection",
+            "type": "isaac::perception::AprilTagsDetection"
+          },
+          {
+            "name": "isaac.viewers.FiducialsViewer",
+            "type": "isaac::viewers::FiducialsViewer"
+          },
+          {
+            "name": "isaac.alice.Throttle",
+            "type": "isaac::alice::Throttle"
+          }
+        ]
+      },
+      {
+        "name": "fiducial_as_goal",
+        "components": [
+          {
+            "name": "isaac.alice.MessageLedger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "isaac.perception.FiducialAsGoal",
+            "type": "isaac::perception::FiducialAsGoal"
+          }
+        ]
+      },
+      {
+        "name": "shared_robot_model",
+        "components": [
+          {
+            "name": "SphericalRobotShapeComponent",
+            "type": "isaac::planner::SphericalRobotShapeComponent"
+          }
+        ]
+      },
+      {
+        "name": "obstacle_atlas",
+        "components": [
+          {
+            "name": "obstacle_atlas",
+            "type": "isaac::map::ObstacleAtlas"
+          }
+        ]
+      },
+      {
+        "name": "2d_kaya",
+        "subgraph": "apps/kaya/2d_kaya.subgraph.json"
+      },
+      {
+        "name": "commander",
+        "subgraph": "packages/navigation/apps/holonomic_base_commander.subgraph.json"
+      },
+      {
+        "name": "imu_odometry",
+        "subgraph": "packages/navigation/apps/holonomic_base_imu_odometry.subgraph.json"
+      },
+      {
+        "name": "control",
+        "subgraph": "packages/navigation/apps/holonomic_base_control.subgraph.json"
+      }
+    ],
+    "edges": [
+      {
+        "source": "2d_kaya.subgraph/interface/realsense_color",
+        "target": "april_tags_detection/isaac.alice.Throttle/input"
+      },
+      {
+        "source": "april_tags_detection/isaac.alice.Throttle/output",
+        "target": "april_tags_detection/isaac.perception.AprilTagsDetection/image"
+      },
+      {
+        "source": "april_tags_detection/isaac.perception.AprilTagsDetection/april_tags",
+        "target": "april_tags_detection/isaac.viewers.FiducialsViewer/fiducials"
+      },
+      {
+        "source": "april_tags_detection/isaac.perception.AprilTagsDetection/april_tags",
+        "target": "fiducial_as_goal/isaac.perception.FiducialAsGoal/fiducials"
+      },
+      {
+        "source": "imu_odometry.subgraph/interface/odometry",
+        "target": "control.subgraph/interface/odometry"
+      },
+      {
+        "source": "fiducial_as_goal/isaac.perception.FiducialAsGoal/plan",
+        "target": "control.subgraph/interface/plan"
+      },
+      {
+        "source": "2d_kaya.subgraph/interface/base_state",
+        "target": "imu_odometry.subgraph/interface/state"
+      },
+      {
+        "source": "2d_kaya.subgraph/interface/imu_raw",
+        "target": "imu_odometry.subgraph/interface/imu_raw"
+      },
+      {
+        "source": "control.subgraph/interface/command",
+        "target": "commander.subgraph/interface/control"
+      },
+      {
+        "source": "commander.subgraph/interface/command",
+        "target": "2d_kaya.subgraph/interface/base_command"
+      }
+    ]
+  },
+  "config": {
+    "shared_robot_model": {
+      "SphericalRobotShapeComponent": {
+        "circles": [
+          { "center": [0.0 ,0.0], "radius": 0.075},
+          { "center": [0.02 ,0.03464], "radius": 0.055},
+          { "center": [0.02 ,-0.03464], "radius": 0.055},
+          { "center": [-0.04 ,0.0], "radius": 0.055},
+          { "center": [0.0525 ,0.09093], "radius": 0.035},
+          { "center": [0.0525 ,-0.09093], "radius": 0.035},
+          { "center": [-0.105 ,0.0], "radius": 0.035}
+        ]
+      }
+    },
+    "april_tags_detection": {
+      "isaac.perception.AprilTagsDetection": {
+        "max_tags": 50,
+        "tag_dimensions": 0.085
+      },
+      "isaac.alice.Throttle": {
+        "data_channel": "input",
+        "output_channel": "output",
+        "minimum_interval": 0.1,
+        "use_signal_channel": false
+      }
+    },
+    "fiducial_as_goal": {
+      "isaac.perception.FiducialAsGoal": {
+        "target_fiducial_id": "tag36h11_7",
+        "robot_frame": "robot",
+        "camera_frame": "camera"
+      }
+    },
+    "control.lqr": {
+      "isaac.planner.HolonomicBaseLqrPlanner": {
+        "obstacle_names": [],
+        "static_frame": "robot",
+        "gain_angular_acceleration": 0.2,
+        "gain_lat_acceleration": 200,
+        "gain_steering": 1.0,
+        "robot_model": "shared_robot_model/SphericalRobotShapeComponent",
+        "manual_mode_channel": "commander.robot_remote/isaac.navigation.RobotRemoteControl/manual_mode"
+      }
+    },
+    "control.control": {
+      "isaac.planner.HolonomicBaseControl": {
+        "manual_mode_channel": "commander.robot_remote/isaac.navigation.RobotRemoteControl/manual_mode"
+      }
+    },
+    "websight": {
+      "WebsightServer": {
+        "port": 3000,
+        "ui_config": {
+          "windows": {
+            "Follower Kaya - Camera": {
+              "renderer": "2d",
+              "channels": [
+                {
+                  "name": "follow_me/2d_kaya.kaya_hardware.camera/color_viewer/Color"
+                },
+                {
+                  "name": "follow_me/april_tags_detection/isaac.viewers.FiducialsViewer/fiducials"
+                },
+                {
+                  "name": "follow_me/fiducial_as_goal/isaac.perception.FiducialAsGoal/tag_pose"
+                },
+                {
+                  "name": "follow_me/fiducial_as_goal/isaac.perception.FiducialAsGoal/target"
+                },
+                {
+                  "name": "follow_me/control.lqr/isaac.planner.HolonomicBaseLqrPlanner/plan"
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

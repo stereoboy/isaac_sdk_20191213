@@ -1,0 +1,44 @@
+{
+  "graph": {
+    "nodes": [
+      {
+        "name": "interface",
+        "components": [
+          {
+            "name": "ledger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "interface",
+            "type": "isaac::alice::Subgraph"
+          }
+        ]
+      },
+      {
+        "name": "group1",
+        "subgraph": "engine/alice/tests/transmission_with_interface.group.json"
+      },
+      {
+        "name": "group2",
+        "subgraph": "engine/alice/tests/transmission_with_interface.group.json"
+      }
+    ],
+    "edges": [
+      {
+        "source": "group1.interface/interface/foo_from_group",
+        "target": "interface/interface/foo_from_group1"
+      },
+      {
+        "source": "interface/interface/foo_to_group2",
+        "target": "group2.interface/interface/foo_to_group"
+      },
+      {
+        "source": "group2.interface/interface/foo_from_group",
+        "target": "group1.interface/interface/foo_to_group"
+      }
+    ]
+  },
+  "config": {
+  }
+}
+

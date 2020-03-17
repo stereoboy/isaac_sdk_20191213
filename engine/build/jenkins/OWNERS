@@ -1,0 +1,7 @@
+inherited: false
+owners:
+- Heron Guillen
+matchers:
+- suffix: .jenkinsfile
+  owners:
+  - Heron Guillen

@@ -1,0 +1,80 @@
+{
+  "name": "detect_net_inference_camerafeed",
+  "modules": [
+    "realsense"
+  ],
+  "graph": {
+    "nodes": [
+      {
+        "name": "camera",
+        "components": [
+          {
+            "name": "message_ledger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "RealsenseCamera",
+            "type": "isaac::RealsenseCamera"
+          },
+          {
+            "name": "ColorCameraViewer",
+            "type": "isaac::viewers::ColorCameraViewer"
+          }
+        ]
+      },
+      {
+        "name": "detect_net_inference",
+        "subgraph": "packages/detect_net/apps/detect_net_inference.subgraph.json"
+      }
+    ],
+    "edges": [
+      {
+        "source": "camera/RealsenseCamera/color",
+        "target": "detect_net_inference.subgraph/interface/image"
+      }
+    ]
+  },
+  "config": {
+    "camera": {
+      "RealsenseCamera": {
+        "enable_depth": false,
+        "color_size": [
+          720,
+          1280
+        ],
+        "color_fps": 60,
+        "rows": 720,
+        "cols": 1280
+      },
+      "ColorCameraViewer": {
+        "camera_name": "left_camera"
+      }
+    },
+    "websight": {
+      "WebsightServer": {
+        "port": 3000,
+        "ui_config": {
+          "windows": {
+            "DetectNetv2 TensorRT Inference: 720x1280": {
+              "renderer": "2d",
+              "dims": {
+                "width": 1280,
+                "height": 720
+              },
+              "channels": [
+                {
+                  "name": "detect_net_inference_camerafeed/detect_net_inference.color_camera_visualizer/isaac.viewers.ColorCameraViewer/Color",
+                  "active": true
+                },
+                {
+                  "name": "detect_net_inference_camerafeed/detect_net_inference.detection_viewer/isaac.viewers.DetectionsViewer/detections",
+                  "active": true
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

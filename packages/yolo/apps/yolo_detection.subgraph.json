@@ -1,0 +1,84 @@
+{
+  "modules": [
+    "ml",
+    "viewers",
+    "yolo"
+  ],
+  "graph": {
+    "nodes": [
+      {
+        "name": "subgraph",
+        "components": [
+          {
+            "name": "message_ledger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "interface",
+            "type": "isaac::alice::Subgraph"
+          }
+        ]
+      },
+      {
+        "name": "yolo_tensorrt_inference",
+        "components": [
+          {
+            "name": "message_ledger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "YoloTensorRTInference",
+            "type": "isaac::yolo::YoloTensorRTInference"
+          }
+        ]
+      },
+      {
+        "name": "bounding_box_visualizer",
+        "components": [
+          {
+            "name": "message_ledger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "DetectionsViewer",
+            "type": "isaac::viewers::DetectionsViewer"
+          }
+        ]
+      },
+      {
+        "name": "detection_decoder",
+        "components": [
+          {
+            "name": "message_ledger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "DetectionDecoder",
+            "type": "isaac::ml::DetectionDecoder"
+          }
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "source": "subgraph/interface/image",
+        "target": "yolo_tensorrt_inference/YoloTensorRTInference/rgb_image"
+      },
+      {
+        "source": "yolo_tensorrt_inference/YoloTensorRTInference/output_detection_tensors",
+        "target": "detection_decoder/DetectionDecoder/input_detection_tensors"
+      },
+      {
+        "source": "detection_decoder/DetectionDecoder/detections",
+        "target": "bounding_box_visualizer/DetectionsViewer/detections"
+      },
+      {
+        "source": "detection_decoder/DetectionDecoder/detections",
+        "target": "subgraph/interface/detections"
+      }
+    ]
+  },
+  "config": {
+  }
+}
+

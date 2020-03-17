@@ -1,0 +1,57 @@
+{
+  "name": "detect_net_inference_replay",
+  "modules": [
+    "detect_net"
+  ],
+  "graph": {
+    "nodes": [
+      {
+        "name": "replay",
+        "subgraph": "packages/record_replay/apps/replay.subgraph.json"
+      },
+      {
+        "name": "detect_net_inference",
+        "subgraph": "packages/detect_net/apps/detect_net_inference.subgraph.json"
+      }
+    ],
+    "edges": [
+      {
+        "source": "replay.interface/output/image",
+        "target": "detect_net_inference.subgraph/interface/image"
+      }
+    ]
+  },
+  "config": {
+    "replay.interface": {
+      "output": {
+        "cask_directory": "external/dolly_detection_pose_estimation_data/dolly_logs"
+      }
+    },
+    "websight": {
+      "WebsightServer": {
+        "port": 3000,
+        "ui_config": {
+          "windows": {
+            "DetectNetv2 TensorRT Inference: 360x640": {
+              "renderer": "2d",
+              "dims": {
+                "width": 640,
+                "height": 360
+              },
+              "channels": [
+                {
+                  "name": "detect_net_inference_replay/detect_net_inference.color_camera_visualizer/isaac.viewers.ColorCameraViewer/Color",
+                  "active": true
+                },
+                {
+                  "name": "detect_net_inference_replay/detect_net_inference.detection_viewer/isaac.viewers.DetectionsViewer/detections",
+                  "active": true
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

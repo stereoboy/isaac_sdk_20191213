@@ -1,0 +1,166 @@
+{
+  "name": "yolo_tensorrt_inference",
+  "modules": [
+    "message_generators",
+    "ml",
+    "viewers",
+    "yolo",
+    "zed"
+  ],
+  "graph": {
+    "nodes": [
+      {
+        "name": "feeder",
+        "components": [
+          {
+            "name": "isaac.alice.MessageLedger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "image_feeder",
+            "type": "isaac::message_generators::ImageLoader"
+          }
+        ]
+      },
+      {
+        "name": "yolo_tensorrt_inference",
+        "components": [
+          {
+            "name": "isaac.alice.MessageLedger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "isaac.yolo.YoloTensorRTInference",
+            "type": "isaac::yolo::YoloTensorRTInference"
+          }
+        ]
+      },
+      {
+        "name": "color_camera_visualizer",
+        "components": [
+          {
+            "name": "isaac.alice.MessageLedger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "isaac.viewers.ColorCameraViewer",
+            "type": "isaac::viewers::ColorCameraViewer"
+          }
+        ]
+      },
+      {
+        "name": "bounding_box_visualizer",
+        "components": [
+          {
+            "name": "isaac.alice.MessageLedger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "isaac.viewers.DetectionsViewer",
+            "type": "isaac::viewers::DetectionsViewer"
+          }
+        ]
+      },
+      {
+        "name": "detection_decoder",
+        "components": [
+          {
+            "name": "message_ledger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "isaac.ml.DetectionDecoder",
+            "type": "isaac::ml::DetectionDecoder"
+          }
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "source": "feeder/image_feeder/color",
+        "target": "yolo_tensorrt_inference/isaac.yolo.YoloTensorRTInference/rgb_image"
+      },
+      {
+        "source": "yolo_tensorrt_inference/isaac.yolo.YoloTensorRTInference/output_detection_tensors",
+        "target": "detection_decoder/isaac.ml.DetectionDecoder/input_detection_tensors"
+      },
+      {
+        "source": "feeder/image_feeder/color",
+        "target": "color_camera_visualizer/isaac.viewers.ColorCameraViewer/color_listener"
+      },
+      {
+        "source": "detection_decoder/isaac.ml.DetectionDecoder/detections",
+        "target": "bounding_box_visualizer/isaac.viewers.DetectionsViewer/detections"
+      }
+    ]
+  },
+  "config": {
+    "feeder": {
+      "image_feeder": {
+        "color_filename": "./external/yolo_tensorrt_test_data/test.png",
+        "tick_period": "1Hz",
+        "focal_length": [100, 100],
+        "optical_center": [500, 500],
+        "distortion_coefficients": [0.01, 0.01, 0.01, 0.01, 0.01]
+      }
+    },
+    "zed": {
+      "zed": {
+        "resolution": "1280x720",
+        "tick_period": "15Hz",
+        "device_id": 0
+      }
+    },
+    "color_camera_visualizer": {
+      "isaac.viewers.ColorCameraViewer": {
+        "camera_name": "left_camera"
+      }
+    },
+    "yolo_tensorrt_inference": {
+      "isaac.yolo.YoloTensorRTInference": {
+        "yolo_config_json" : {
+          "yolo_dimensions": [416, 416],
+          "batch_size":1,
+          "weights_file_path": "./external/yolo_tensorrt_test_data/yolov3_synthetic.weights",
+          "config_file_path": "./external/yolo_tensorrt_test_data/yolov3_synthetic.cfg",
+          "tensorrt_folder_path": "/tmp/",
+          "num_classes": 6,
+          "network_type": "yolov3"
+        }
+      }
+    },
+    "detection_decoder": {
+      "isaac.ml.DetectionDecoder": {
+        "labels_file_path" : "./external/yolo_tensorrt_test_data/labels_synthetic.txt",
+        "nms_threshold" : 0.6,
+        "confidence_threshold" : 0.6
+      }
+    },
+    "websight": {
+      "WebsightServer": {
+        "port": 3000,
+        "ui_config": {
+          "windows": {
+            "Yolo Tensorrt": {
+              "renderer": "2d",
+              "dims": {
+                "width": 416,
+                "height": 416
+              },
+              "channels": [
+                {
+                  "name": "yolo_tensorrt_inference/color_camera_visualizer/isaac.viewers.ColorCameraViewer/Color",
+                  "active": true
+                },
+                {
+                  "name": "yolo_tensorrt_inference/bounding_box_visualizer/isaac.viewers.DetectionsViewer/detections",
+                  "active": true
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

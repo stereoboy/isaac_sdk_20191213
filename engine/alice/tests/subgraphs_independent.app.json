@@ -1,0 +1,15 @@
+{
+  "name": "subgraphs",
+  "graph": {
+    "nodes": [
+      {
+        "name": "group1",
+        "subgraph": "engine/alice/tests/transmission.group.json"
+      },
+      {
+        "name": "group2",
+        "subgraph": "engine/alice/tests/transmission.group.json"
+      }
+    ]
+  }
+}

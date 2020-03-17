@@ -1,0 +1,180 @@
+{
+  "name": "evaluate_object_detection",
+  "modules": [
+    "ml",
+    "ml:evaluation",
+    "viewers",
+    "yolo"
+  ],
+  "graph": {
+    "nodes": [
+      {
+        "name": "simulation",
+        "subgraph": "apps/samples/yolo/ue4sim.subgraph.json"
+      },
+      {
+        "name": "inference",
+        "subgraph": "packages/yolo/apps/yolo_detection.subgraph.json"
+      },
+      {
+        "name": "detection_comparer",
+        "components": [
+          {
+            "name": "ml",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "isaac.ml.DetectionComparer",
+            "type": "isaac::ml::DetectionComparer"
+          }
+        ]
+      },
+      {
+        "name": "metrics_aggregator",
+        "components": [
+          {
+            "name": "ml",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "isaac.ml.ConfusionMatrixAggregator",
+            "type": "isaac::ml::ConfusionMatrixAggregator"
+          }
+        ]
+      },
+      {
+        "name": "color_camera_viewer",
+        "components": [
+          {
+            "name": "message_ledger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "isaac.viewers.ColorCameraViewer",
+            "type": "isaac::viewers::ColorCameraViewer"
+          }
+        ]
+      },
+      {
+        "name": "object_detection_metrics_verifier",
+        "components": [
+          {
+            "name": "message_ledger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "isaac.alice.PyCodelet",
+            "type": "isaac::alice::PyCodelet"
+          }
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "source": "simulation.interface/output/detections",
+        "target": "detection_comparer/isaac.ml.DetectionComparer/ground_truth_detection"
+      },
+      {
+        "source": "simulation.interface/output/color",
+        "target": "inference.subgraph/interface/image"
+      },
+      {
+        "source": "simulation.interface/output/color",
+        "target": "color_camera_viewer/isaac.viewers.ColorCameraViewer/color_listener"
+      },
+      {
+        "source": "inference.subgraph/interface/detections",
+        "target": "detection_comparer/isaac.ml.DetectionComparer/predicted_detection"
+      },
+      {
+        "source": "detection_comparer/isaac.ml.DetectionComparer/metrics",
+        "target": "metrics_aggregator/isaac.ml.ConfusionMatrixAggregator/sample_metrics"
+      },
+      {
+        "source": "metrics_aggregator/isaac.ml.ConfusionMatrixAggregator/accumulated_metrics",
+        "target": "object_detection_metrics_verifier/isaac.alice.PyCodelet/object_detection_metrics"
+      }
+    ]
+  },
+  "config": {
+    "detection_comparer": {
+      "isaac.ml.DetectionComparer": {
+        "class_names": [
+          "Ball",
+          "Bowling_Pin",
+          "Chair",
+          "Plants",
+          "Trashcan"
+        ]
+      }
+    },
+    "metrics_aggregator": {
+      "isaac.ml.ConfusionMatrixAggregator": {
+        "slice_index": 6
+      }
+    },
+    "object_detection_metrics_verifier": {
+      "isaac.alice.PyCodelet": {
+        "class_names": [
+          "Ball",
+          "Bowling_Pin",
+          "Chair",
+          "Plants",
+          "Trashcan"
+        ]
+      }
+    },
+    "inference.yolo_tensorrt_inference": {
+      "YoloTensorRTInference": {
+        "yolo_config_json": {
+          "yolo_dimensions": [
+            416,
+            416
+          ],
+          "batch_size": 1,
+          "weights_file_path": "./external/yolo_tensorrt_test_data/yolov3_synthetic.weights",
+          "config_file_path": "./external/yolo_tensorrt_test_data/yolov3_synthetic.cfg",
+          "tensorrt_folder_path": "/tmp/",
+          "num_classes": 6,
+          "network_type": "yolov3"
+        }
+      }
+    },
+    "inference.detection_decoder": {
+      "DetectionDecoder": {
+        "labels_file_path": "./external/yolo_tensorrt_test_data/labels_synthetic.txt",
+        "nms_threshold": 0.6,
+        "confidence_threshold": 0.6
+      }
+    },
+    "mock_metrics": {
+      "isaac.ml.MockObjectDetectionMetrics": {
+        "tick_period": "10Hz"
+      }
+    },
+    "websight": {
+      "WebsightServer": {
+        "port": 3000,
+        "ui_config": {
+          "windows": {
+            "Object Detection Test: Detections": {
+              "renderer": "2d",
+              "dims": {
+                "width": 500,
+                "height": 500
+              },
+              "channels": [
+                {
+                  "name": "evaluate_object_detection/color_camera_viewer/isaac.viewers.ColorCameraViewer/Color"
+                },
+                {
+                  "name": "evaluate_object_detection/inference.bounding_box_visualizer/DetectionsViewer/detections"
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

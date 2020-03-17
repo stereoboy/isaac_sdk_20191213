@@ -1,0 +1,100 @@
+{
+  "nodes": [
+    {
+      "name": "A_CarterGroup",
+      "components": [
+        {
+          "name": "MessageLedger",
+          "type": "isaac::alice::MessageLedger"
+        },
+        {
+          "name": "ActorGroup",
+          "type": "isaac::sim_bridge::ActorGroup"
+        }
+      ]
+    },
+    {
+      "name": "A_SphereGroup",
+      "components": [
+        {
+          "name": "MessageLedger",
+          "type": "isaac::alice::MessageLedger"
+        },
+        {
+          "name": "ActorGroup",
+          "type": "isaac::sim_bridge::ActorGroup"
+        }
+      ]
+    },
+    {
+      "name": "camera_teleportation",
+      "components": [
+        {
+          "name": "message_ledger",
+          "type": "isaac::alice::MessageLedger"
+        },
+        {
+          "name": "isaac.alice.TcpSubscriber",
+          "type": "isaac::alice::TcpSubscriber"
+        }
+      ]
+    },
+    {
+      "name": "ball_teleportation",
+      "components": [
+        {
+          "name": "message_ledger",
+          "type": "isaac::alice::MessageLedger"
+        },
+        {
+          "name": "isaac.alice.TcpSubscriber",
+          "type": "isaac::alice::TcpSubscriber"
+        }
+      ]
+    },
+    {
+      "name": "CarterLeftCamera",
+      "components": [
+        {
+          "name": "isaac.alice.MessageLedger",
+          "type": "isaac::alice::MessageLedger"
+        },
+        {
+          "name": "CameraComponent",
+          "type": "isaac::sim_bridge::Camera"
+        }
+      ]
+    },
+    {
+      "name": "LeftCameraPublisher",
+      "components": [
+        {
+          "name": "isaac.alice.MessageLedger",
+          "type": "isaac::alice::MessageLedger"
+        },
+        {
+          "name": "isaac.alice.TcpPublisher",
+          "type": "isaac::alice::TcpPublisher"
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "source": "CarterLeftCamera/CameraComponent/color_image",
+      "target": "LeftCameraPublisher/isaac.alice.TcpPublisher/ColorSensor"
+    },
+    {
+      "source": "CarterLeftCamera/CameraComponent/segmentation_image",
+      "target": "LeftCameraPublisher/isaac.alice.TcpPublisher/SegmentationSensor"
+    },
+    {
+      "source": "camera_teleportation/isaac.alice.TcpSubscriber/rigid_command",
+      "target": "A_CarterGroup/ActorGroup/rigid_command"
+    },
+    {
+      "source": "ball_teleportation/isaac.alice.TcpSubscriber/rigid_command",
+      "target": "A_SphereGroup/ActorGroup/rigid_command"
+    }
+  ]
+}

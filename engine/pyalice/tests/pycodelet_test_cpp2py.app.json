@@ -1,0 +1,43 @@
+{
+  "name": "pycodelet_test_cpp2py",
+  "modules": [
+    "//engine/pyalice/tests:components",
+    "message_generators"
+  ],
+  "graph": {
+    "nodes": [
+      {
+        "name": "cpp_producer",
+        "components": [
+          {
+            "name": "message_ledger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "isaac.dummy.DummyPose2dProducer",
+            "type": "isaac::dummy::DummyPose2dProducer"
+          }
+        ]
+      },
+      {
+        "name": "py_consumer",
+        "components": [
+          {
+            "name": "message_ledger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "isaac.alice.PyCodelet",
+            "type": "isaac::alice::PyCodelet"
+          }
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "source": "cpp_producer/isaac.dummy.DummyPose2dProducer/pose",
+        "target": "py_consumer/isaac.alice.PyCodelet/pose"
+      }
+    ]
+  }
+}

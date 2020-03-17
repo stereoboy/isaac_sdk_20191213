@@ -1,0 +1,238 @@
+{
+  "name": "log_cartographer",
+  "modules": [
+    "navigation",
+    "lidar_slam:cartographer",
+    "perception"
+  ],
+  "graph": {
+    "nodes": [
+      {
+        "name": "robot_pose_initializer",
+        "start_order": -200,
+        "components": [
+          {
+            "name": "initial_pose",
+            "type": "isaac::alice::PoseInitializer"
+          }
+        ]
+      },
+      {
+        "name": "lidar_pose",
+        "start_order": -200,
+        "components": [
+          {
+            "name": "initial_pose",
+            "type": "isaac::alice::PoseInitializer"
+          }
+        ]
+      },
+      {
+        "name": "replay_bridge",
+        "components": [
+          {
+            "name": "message_ledger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "ReplayBridge",
+            "type": "isaac::alice::ReplayBridge"
+          }
+        ]
+      },
+      {
+        "name": "replay",
+        "components": [
+          {
+            "name": "message_ledger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "isaac.alice.Replay",
+            "type": "isaac::alice::Replay"
+          }
+        ]
+      },
+      {
+        "name": "segway_odometry",
+        "components": [
+          {
+            "name": "message_ledger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "isaac.navigation.DifferentialBaseWheelImuOdometry",
+            "type": "isaac::navigation::DifferentialBaseWheelImuOdometry"
+          }
+        ]
+      },
+      {
+        "name": "range_scan_flattening",
+        "components": [
+          {
+            "name": "message_ledger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "isaac.perception.RangeScanFlattening",
+            "type": "isaac::perception::RangeScanFlattening"
+          }
+        ]
+      },
+      {
+        "name": "cartographer",
+        "components": [
+          {
+            "name": "message_ledger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "cartographer",
+            "type": "isaac::lidar_slam::Cartographer"
+          }
+        ]
+      },
+      {
+        "name": "range_scan_to_observation_map",
+        "components": [
+          {
+            "name": "isaac.navigation.RangeScanToObservationMap",
+            "type": "isaac::navigation::RangeScanToObservationMap"
+          },
+          {
+            "name": "message_ledger",
+            "type": "isaac::alice::MessageLedger"
+          }
+        ]
+      },
+      {
+        "name": "local_map",
+        "components": [
+          {
+            "name": "message_ledger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "isaac.navigation.LocalMap",
+            "type": "isaac::navigation::LocalMap"
+          }
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "source": "websight/WebsightServer/replay",
+        "target": "replay_bridge/ReplayBridge/request"
+      },
+      {
+        "source": "replay_bridge/ReplayBridge/reply",
+        "target": "websight/WebsightServer/replay_reply"
+      },
+      {
+        "source": "replay/isaac.alice.Replay/fullscan",
+        "target": "range_scan_flattening/isaac.perception.RangeScanFlattening/scan"
+      },
+      {
+        "source": "range_scan_flattening/isaac.perception.RangeScanFlattening/flatscan",
+        "target": "cartographer/cartographer/flatscan"
+      },
+      {
+        "source": "replay/isaac.alice.Replay/segway_state",
+        "target": "segway_odometry/isaac.navigation.DifferentialBaseWheelImuOdometry/state"
+      },
+      {
+        "source": "replay/isaac.alice.Replay/imu_corrected",
+        "target": "segway_odometry/isaac.navigation.DifferentialBaseWheelImuOdometry/imu"
+      },
+      {
+        "source": "range_scan_to_observation_map/isaac.navigation.RangeScanToObservationMap/observation_map",
+        "target": "local_map/isaac.navigation.LocalMap/observation_map"
+      },
+      {
+        "source": "range_scan_to_observation_map/isaac.navigation.RangeScanToObservationMap/observation_map_lattice",
+        "target": "local_map/isaac.navigation.LocalMap/observation_map_lattice"
+      },
+      {
+        "source": "range_scan_flattening/isaac.perception.RangeScanFlattening/flatscan",
+        "target": "range_scan_to_observation_map/isaac.navigation.RangeScanToObservationMap/flatscan"
+      }
+    ]
+  },
+  "config": {
+    "robot_pose_initializer": {
+      "initial_pose": {
+        "lhs_frame": "world",
+        "rhs_frame": "robot_init",
+        "pose": [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        "attach_interactive_marker": true
+      }
+    },
+    "lidar_pose": {
+      "initial_pose": {
+        "lhs_frame": "robot",
+        "rhs_frame": "lidar",
+        "pose": [1.0, 0.0, 0.0, 0.0, -0.04, 0.0, 0.59]
+      }
+    },
+    "replay_bridge": {
+      "ReplayBridge": {
+        "replay_component_name": "replay/isaac.alice.Replay",
+        "tick_period": "250ms"
+      }
+    },
+    "cartographer": {
+      "cartographer": {
+        "lua_configuration_directory": "apps/carter/log_cartographer/,../com_github_googlecartographer_cartographer/configuration_files/,external/com_github_googlecartographer_cartographer/configuration_files/",
+        "lua_configuration_basename": "carter.lua",
+        "background_size": [3000, 3000],
+        "background_translation": [-150.0, -150.0],
+        "tick_dt": 0.25,
+        "num_visible_submaps": 100,
+        "tick_period": "250ms"
+      }
+    },
+    "range_scan_flattening": {
+      "isaac.perception.RangeScanFlattening": {
+        "height_min": -0.40,
+        "height_max": 1.0,
+        "pitch_fudge": 0.0174533
+      }
+    },
+    "segway_odometry": {
+      "isaac.navigation.DifferentialBaseWheelImuOdometry": {
+        "tick_period": "100Hz"
+      }
+    },
+    "websight": {
+      "WebsightServer": {
+        "port": 3000,
+        "ui_config": {
+          "windows": {
+            "Log Cartographer: Local View": {
+              "renderer": "2d",
+              "dims": {
+                "width": 256,
+                "height": 256
+              },
+              "channels": [
+                { "name": "log_cartographer/local_map/isaac.navigation.LocalMap/local_map" }
+              ]
+            },
+            "Log Cartographer: Cartographer": {
+              "renderer": "2d",
+              "dims": {
+                "width": 3000,
+                "height": 3000
+              },
+              "channels": [
+                { "name": "log_cartographer/cartographer/cartographer/map_background" },
+                { "name": "log_cartographer/cartographer/cartographer/submaps" },
+                { "name": "log_cartographer/cartographer/cartographer/trajectory_node" }
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

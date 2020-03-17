@@ -1,0 +1,211 @@
+{
+    "name": "inference",
+    "modules": [
+      "//apps/samples/ball_segmentation:ball_segmentation_visualizer",
+      "//packages/ml:ml",
+      "//packages/ml:tensorflow",
+      "//packages/perception",
+      "sensors:v4l2_camera",
+      "viewers"
+    ],
+    "graph": {
+        "nodes": [
+            {
+              "name": "camera",
+              "components": [
+                {
+                  "name": "message_ledger",
+                  "type": "isaac::alice::MessageLedger"
+                },
+                {
+                  "name": "isaac.V4L2Camera",
+                  "type": "isaac::V4L2Camera"
+                }
+              ]
+            },
+            {
+              "name": "color_camera_encoder",
+              "components": [
+                {
+                  "name": "message_ledger",
+                  "type": "isaac::alice::MessageLedger"
+                },
+                {
+                  "name": "isaac.ml.ColorCameraEncoderCpu",
+                  "type": "isaac::ml::ColorCameraEncoderCpu"
+                }
+              ]
+            },
+            {
+              "name": "tensorflow_inference",
+              "components": [
+                {
+                  "name": "message_ledger",
+                  "type": "isaac::alice::MessageLedger"
+                },
+                {
+                  "name": "isaac.ml.TensorflowInference",
+                  "type": "isaac::ml::TensorflowInference"
+                }
+              ]
+            },
+            {
+              "name": "tensor_reshape_after_image_encoder",
+              "components": [
+                {
+                  "name": "message_ledger",
+                  "type": "isaac::alice::MessageLedger"
+                },
+                {
+                  "name": "isaac.ml.TensorReshape",
+                  "type": "isaac::ml::TensorReshape"
+                }
+              ]
+            },
+            {
+              "name": "tensor_reshape_before_segmentation_decoder",
+              "components": [
+                {
+                  "name": "message_ledger",
+                  "type": "isaac::alice::MessageLedger"
+                },
+                {
+                  "name": "isaac.ml.TensorReshape",
+                  "type": "isaac::ml::TensorReshape"
+                }
+              ]
+            },
+            {
+              "name": "segmentation_decoder",
+              "components": [
+                {
+                  "name": "message_ledger",
+                  "type": "isaac::alice::MessageLedger"
+                },
+                {
+                  "name": "isaac.ml.SegmentationDecoder",
+                  "type": "isaac::ml::SegmentationDecoder"
+                }
+              ]
+            },
+            {
+              "name": "visualize_prediction",
+              "components": [
+                {
+                  "name": "message_ledger",
+                  "type": "isaac::alice::MessageLedger"
+                },
+                {
+                  "name": "isaac.ball_segmentation.VisualizePrediction",
+                  "type": "isaac::ball_segmentation::VisualizePrediction"
+                }
+              ]
+            }
+          ],
+          "edges": [
+            {
+              "source": "camera/isaac.V4L2Camera/frame",
+              "target": "color_camera_encoder/isaac.ml.ColorCameraEncoderCpu/rgb_image"
+            },
+            {
+              "source": "color_camera_encoder/isaac.ml.ColorCameraEncoderCpu/tensor",
+              "target": "tensor_reshape_after_image_encoder/isaac.ml.TensorReshape/input_tensors"
+            },
+            {
+              "source": "tensor_reshape_after_image_encoder/isaac.ml.TensorReshape/output_tensors",
+              "target": "tensorflow_inference/isaac.ml.TensorflowInference/input_tensors"
+            },
+            {
+              "source": "tensorflow_inference/isaac.ml.TensorflowInference/output_tensors",
+              "target": "tensor_reshape_before_segmentation_decoder/isaac.ml.TensorReshape/input_tensors"
+            },
+            {
+              "source": "tensor_reshape_before_segmentation_decoder/isaac.ml.TensorReshape/output_tensors",
+              "target": "segmentation_decoder/isaac.ml.SegmentationDecoder/tensors"
+            },
+            {
+              "source": "color_camera_encoder/isaac.ml.ColorCameraEncoderCpu/tensor",
+              "target": "visualize_prediction/isaac.ball_segmentation.VisualizePrediction/image_tensor"
+            },
+            {
+              "source": "segmentation_decoder/isaac.ml.SegmentationDecoder/segmentation_prediction",
+              "target": "visualize_prediction/isaac.ball_segmentation.VisualizePrediction/segmentation_prediction"
+            }
+          ]
+    },
+    "config": {
+        "color_camera_encoder": {
+            "isaac.ml.ColorCameraEncoderCpu": {
+              "rows": 256,
+              "cols": 512,
+              "pixel_normalization_mode": "PositiveNegative"
+            }
+          },
+          "camera": {
+            "isaac.V4L2Camera": {
+              "device_id": 0,
+              "rows": 448,
+              "cols": 800,
+              "rate_hz": 30
+            }
+          },
+          "tensorflow_inference": {
+            "isaac.ml.TensorflowInference": {
+              "model_file_path": "external/ball_segmentation_model/model-9000-frozen.pb",
+              "config_file_path": "",
+              "input_tensor_info": [
+                {
+                  "ops_name": "input",
+                  "index": 0,
+                  "dims": [1, 256, 512, 3]
+                }
+              ],
+              "output_tensor_info": [
+                {
+                  "ops_name": "output",
+                  "index": 0,
+                  "dims": [1, 256, 512, 1]
+                }
+              ]
+            }
+          },
+          "segmentation_decoder": {
+            "isaac.ml.SegmentationDecoder": {
+              "class_names": ["ball"]
+            }
+          },
+          "tensor_reshape_after_image_encoder": {
+            "isaac.ml.TensorReshape": {
+              "output_tensors_dimension": [[1, 256, 512, 3]]
+            }
+          },
+          "tensor_reshape_before_segmentation_decoder": {
+            "isaac.ml.TensorReshape": {
+              "output_tensors_dimension": [[256, 512, 1]]
+            }
+          },
+          "websight": {
+            "WebsightServer": {
+              "port": 3000,
+              "ui_config": {
+                "windows": {
+                  "Ball Segmentation - Inference": {
+                    "renderer": "2d",
+                    "dims": {
+                      "width": 1024,
+                      "height": 256
+                    },
+                    "channels": [
+                      {
+                        "name": "inference/visualize_prediction/isaac.ball_segmentation.VisualizePrediction/image_with_prediction",
+                        "active": true
+                      }
+                    ]
+                  }
+                },
+                "assets": {}
+              }
+            }
+        }
+    }
+}

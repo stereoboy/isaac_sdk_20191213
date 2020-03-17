@@ -1,0 +1,35 @@
+{
+  "config": {
+    "interface": {
+      "replay": {
+        "cask_directory": "./external/object_detection_test_data/gold_standard_log",
+        "replay_time_offset": 0,
+        "use_recorded_message_time": true,
+        "loop": true
+      }
+    }
+  },
+  "graph": {
+    "nodes": [
+      {
+        "name": "interface",
+        "components": [
+          {
+            "name": "ledger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "subgraph",
+            "type": "isaac::alice::Subgraph"
+          },
+          {
+            "name": "replay",
+            "type": "isaac::alice::Replay"
+          }
+        ]
+      }
+    ],
+    "edges": [
+    ]
+  }
+}

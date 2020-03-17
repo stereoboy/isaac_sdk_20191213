@@ -1,0 +1,77 @@
+{
+  "A_CarterGroup": {
+    "ActorGroup": {
+      "actors": [
+        {
+          "name": "carter_1",
+          "reference": "Blueprint'/Game/Actors/CubeActor.CubeActor'",
+          "pose": [1, 0, 0, 0, -11.01, 63.47, 0.92]
+        }
+      ]
+    }
+  },
+  "A_SphereGroup": {
+    "ActorGroup": {
+      "actors": [
+        {
+          "name": "sphere",
+          "reference": "Blueprint'/Game/Actors/SphereActor.SphereActor'",
+          "pose": [1, 0, 0, 0, -11.01, 63.47, 0.92]
+        }
+      ]
+    }
+  },
+  "CarterLeftCamera": {
+    "CameraComponent": {
+      "parent_actor": "carter_1",
+      "parent_T_camera": [1, 0, 0, 0, 0.11, 0.7, 0.31],
+      "cols": 512,
+      "rows": 256,
+      "enable_rgb": true,
+      "enable_depth": false,
+      "enable_segmentation": true,
+      "min_depth": 0,
+      "max_depth": 100.0,
+      "segmentation_classes": {
+        "static_mesh": [
+          {
+            "name": "box"
+          },
+          {
+            "name": "floor"
+          },
+          {
+            "name": "wall"
+          },
+          {
+            "name": "rack"
+          },
+          {
+            "name": "Sphere"
+          },
+          {
+            "name": "character"
+          }
+        ]
+      }
+    }
+  },
+  "LeftCameraPublisher": {
+    "isaac.alice.TcpPublisher": {
+      "port": 5003,
+      "host": "localhost"
+    }
+  },
+  "camera_teleportation": {
+    "isaac.alice.TcpSubscriber": {
+      "port": 5004,
+      "host": "localhost"
+    }
+  },
+  "ball_teleportation": {
+    "isaac.alice.TcpSubscriber": {
+      "port": 5005,
+      "host": "localhost"
+    }
+  }
+}

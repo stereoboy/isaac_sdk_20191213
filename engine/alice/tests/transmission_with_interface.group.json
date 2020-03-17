@@ -1,0 +1,117 @@
+{
+  "graph": {
+    "nodes": [
+      {
+        "name": "pub",
+        "components": [
+          {
+            "name": "ledger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "pub",
+            "type": "isaac::alice::FooTransmitter"
+          }
+        ]
+      },
+      {
+        "name": "sub",
+        "components": [
+          {
+            "name": "ledger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "sub",
+            "type": "isaac::alice::FooReceiver"
+          }
+        ]
+      },
+      {
+        "name": "pub_outside_group",
+        "components": [
+          {
+            "name": "ledger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "pub",
+            "type": "isaac::alice::FooTransmitter"
+          }
+        ]
+      },
+      {
+        "name": "sub_outside_group",
+        "components": [
+          {
+            "name": "ledger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "sub",
+            "type": "isaac::alice::FooReceiver"
+          }
+        ]
+      },
+      {
+        "name": "interface",
+        "components": [
+          {
+            "name": "ledger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "interface",
+            "type": "isaac::alice::Subgraph"
+          }
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "source": "pub/pub/foo",
+        "target": "sub/sub/foo"
+      },
+      {
+        "source": "pub_outside_group/pub/foo",
+        "target": "interface/interface/foo_from_group"
+      },
+      {
+        "source": "interface/interface/foo_to_group",
+        "target": "sub_outside_group/sub/foo"
+      }
+    ]
+  },
+  "config": {
+    "pub": {
+      "pub": {
+        "offset": 47,
+        "tick_period": "100ms",
+        "expected_tick_count": 6,
+        "expected_tick_count_tolerance": 1
+      }
+    },
+    "sub": {
+      "sub": {
+        "offset": 47,
+        "expected_tick_count": 6,
+        "expected_tick_count_tolerance": 1
+      }
+    },
+    "pub_outside_group": {
+      "pub": {
+        "offset": 47,
+        "tick_period": "100ms",
+        "expected_tick_count": 6,
+        "expected_tick_count_tolerance": 1
+      }
+    },
+    "sub_outside_group": {
+      "sub": {
+        "offset": 47,
+        "expected_tick_count": 6,
+        "expected_tick_count_tolerance": 1
+      }
+    }
+  }
+}

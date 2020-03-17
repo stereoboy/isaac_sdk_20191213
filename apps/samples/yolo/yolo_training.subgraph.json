@@ -1,0 +1,198 @@
+{
+  "modules": [
+    "ml",
+    "perception",
+    "viewers"
+  ],
+  "config": {
+    "detection_encoder": {
+      "isaac.ml.DetectionEncoder": {
+        "class_names": [
+          "Barel",
+          "Bottle",
+          "CardBox",
+          "character"
+        ],
+        "area_threshold": 100
+      }
+    },
+    "color_camera_encoder": {
+      "isaac.ml.ColorCameraEncoderCpu": {
+        "rows": 256,
+        "cols": 512,
+        "pixel_normalization_mode": "PositiveNegative"
+      }
+    },
+    "color_camera_visualizer": {
+      "isaac.viewers.ColorCameraViewer": {
+        "camera_name": "left_camera"
+      }
+    },
+    "object_detection_training_samples": {
+      "isaac.ml.SampleAccumulator": {
+        "sample_buffer_size": 32
+      },
+      "random": {
+        "use_random_seed": true
+      }
+    },
+    "camera_teleportation": {
+      "isaac.ml.Teleportation": {
+        "tick_period": "5hz"
+      },
+      "random": {
+        "use_random_seed": true
+      }
+    }
+  },
+  "graph": {
+    "nodes": [
+      {
+        "name": "interface",
+        "components": [
+          {
+            "name": "ledger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "subgraph",
+            "type": "isaac::alice::Subgraph"
+          }
+        ]
+      },
+      {
+        "name": "color_camera_encoder",
+        "components": [
+          {
+            "name": "message_ledger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "isaac.ml.ColorCameraEncoderCpu",
+            "type": "isaac::ml::ColorCameraEncoderCpu"
+          }
+        ]
+      },
+      {
+        "name": "detection_encoder",
+        "components": [
+          {
+            "name": "message_ledger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "isaac.ml.DetectionEncoder",
+            "type": "isaac::ml::DetectionEncoder"
+          }
+        ]
+      },
+      {
+        "name": "color_camera_visualizer",
+        "components": [
+          {
+            "name": "isaac.alice.MessageLedger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "isaac.viewers.ColorCameraViewer",
+            "type": "isaac::viewers::ColorCameraViewer"
+          }
+        ]
+      },
+      {
+        "name": "bounding_box_visualizer",
+        "components": [
+          {
+            "name": "isaac.alice.MessageLedger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "isaac.viewers.DetectionsViewer",
+            "type": "isaac::viewers::DetectionsViewer"
+          }
+        ]
+      },
+      {
+        "name": "tensor_synchronizer",
+        "components": [
+          {
+            "name": "message_ledger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "isaac.ml.TensorSynchronization",
+            "type": "isaac::ml::TensorSynchronization"
+          }
+        ]
+      },
+      {
+        "name": "object_detection_training_samples",
+        "components": [
+          {
+            "name": "message_ledger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "random",
+            "type": "isaac::alice::Random"
+          },
+          {
+            "name": "isaac.ml.SampleAccumulator",
+            "type": "isaac::ml::SampleAccumulator"
+          }
+        ]
+      },
+      {
+        "name": "camera_teleportation",
+        "components": [
+          {
+            "name": "message_ledger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "random",
+            "type": "isaac::alice::Random"
+          },
+          {
+            "name": "isaac.ml.Teleportation",
+            "type": "isaac::ml::Teleportation"
+          }
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "source": "interface/subgraph/color",
+        "target": "color_camera_encoder/isaac.ml.ColorCameraEncoderCpu/rgb_image"
+      },
+      {
+        "source": "interface/subgraph/color",
+        "target": "color_camera_visualizer/isaac.viewers.ColorCameraViewer/color_listener"
+      },
+      {
+        "source": "interface/subgraph/detections",
+        "target": "detection_encoder/isaac.ml.DetectionEncoder/detection"
+      },
+      {
+        "source": "interface/subgraph/detections",
+        "target": "bounding_box_visualizer/isaac.viewers.DetectionsViewer/detections"
+      },
+      {
+        "source": "color_camera_encoder/isaac.ml.ColorCameraEncoderCpu/tensor",
+        "target": "tensor_synchronizer/isaac.ml.TensorSynchronization/tensor1"
+      },
+      {
+        "source": "detection_encoder/isaac.ml.DetectionEncoder/tensor",
+        "target": "tensor_synchronizer/isaac.ml.TensorSynchronization/tensor2"
+      },
+      {
+        "source": "tensor_synchronizer/isaac.ml.TensorSynchronization/tensorlist",
+        "target": "object_detection_training_samples/isaac.ml.SampleAccumulator/samples"
+      },
+      {
+        "source": "camera_teleportation/isaac.ml.Teleportation/rigid_command",
+        "target": "interface/subgraph/teleport_command"
+      }
+    ]
+  }
+}

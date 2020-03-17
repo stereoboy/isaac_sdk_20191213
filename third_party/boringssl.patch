@@ -1,0 +1,15 @@
+diff --git BUILD BUILD
+index af7bd30..ef697ee 100644
+--- BUILD
++++ BUILD
+@@ -68,6 +68,10 @@ posix_copts = [
+     # operations for reference counting rather than locks. However, it's
+     # known not to work on some Android builds.
+     # "-DOPENSSL_C11_ATOMIC",
++
++    # To deal with ssl conflict with Unity
++    # https://forum.unity.com/threads/native-library-use-openssl-conflict-with-unity-on-linux.404847/
++    "-fvisibility=hidden",
+ ]
+
+ boringssl_copts = select({

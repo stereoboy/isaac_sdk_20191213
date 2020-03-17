@@ -1,0 +1,116 @@
+{
+  "modules": [
+    "ml"
+  ],
+  "graph": {
+    "nodes": [
+      {
+        "name": "interface",
+        "components": [
+          {
+            "name": "ledger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "subgraph",
+            "type": "isaac::alice::Subgraph"
+          }
+        ]
+      },
+      {
+        "name": "simulation",
+        "subgraph": "packages/object_pose_estimation/apps/pose_estimation_sim.subgraph.json"
+      },
+      {
+        "name": "encoder_crop_downsample",
+        "components": [
+          {
+            "name": "ledger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "CropAndDownsample",
+            "type": "isaac::ml::DetectionImageExtraction"
+          }
+        ]
+      },
+      {
+        "name": "decoder_crop_downsample",
+        "components": [
+          {
+            "name": "ledger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "CropAndDownsample",
+            "type": "isaac::ml::DetectionImageExtraction"
+          }
+        ]
+      },
+      {
+        "name": "tensor_synchronizer",
+        "components": [
+          {
+            "name": "ledger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "TensorSynchronization",
+            "type": "isaac::ml::TensorSynchronization"
+          }
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "source": "simulation.interface/output/encoder_color",
+        "target": "encoder_crop_downsample/CropAndDownsample/input_image"
+      },
+      {
+        "source": "simulation.interface/subgraph/encoder_bounding_boxes",
+        "target": "encoder_crop_downsample/CropAndDownsample/input_detections"
+      },
+      {
+        "source": "encoder_crop_downsample/CropAndDownsample/output_tensors",
+        "target": "tensor_synchronizer/TensorSynchronization/tensor1"
+      },
+      {
+        "source": "simulation.interface/output/decoder_color",
+        "target": "decoder_crop_downsample/CropAndDownsample/input_image"
+      },
+      {
+        "source": "simulation.interface/subgraph/decoder_bounding_boxes",
+        "target": "decoder_crop_downsample/CropAndDownsample/input_detections"
+      },
+      {
+        "source": "decoder_crop_downsample/CropAndDownsample/output_tensors",
+        "target": "tensor_synchronizer/TensorSynchronization/tensor2"
+      },
+      {
+        "source": "tensor_synchronizer/TensorSynchronization/tensorlist",
+        "target": "interface/subgraph/tensorlist"
+      }
+    ]
+  },
+  "config": {
+    "encoder_crop_downsample": {
+      "CropAndDownsample": {
+        "downsample_size": [128, 128],
+        "pixel_normalization_mode": "Unit",
+        "tensor_index_order": "201"
+      }
+    },
+    "decoder_crop_downsample": {
+      "CropAndDownsample": {
+        "downsample_size": [128, 128],
+        "pixel_normalization_mode": "Unit",
+        "tensor_index_order": "201"
+      }
+    },
+    "tensor_synchronizer": {
+      "TensorSynchronization": {
+        "tensor_count": 2
+      }
+    }
+  }
+}

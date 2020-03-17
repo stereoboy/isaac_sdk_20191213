@@ -1,0 +1,83 @@
+{
+  "name": "detect_net_inference_imagefeeder",
+  "modules": [
+    "message_generators",
+    "detect_net"
+  ],
+  "graph": {
+    "nodes": [
+      {
+        "name": "feeder",
+        "components": [
+          {
+            "name": "message_ledger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "image_feeder",
+            "type": "isaac::message_generators::ImageLoader"
+          }
+        ]
+      },
+      {
+        "name": "detect_net_inference",
+        "subgraph": "packages/detect_net/apps/detect_net_inference.subgraph.json"
+      }
+    ],
+    "edges": [
+      {
+        "source": "feeder/image_feeder/color",
+        "target": "detect_net_inference.subgraph/interface/image"
+      }
+    ]
+  },
+  "config": {
+    "feeder": {
+      "image_feeder": {
+        "color_glob_pattern": "external/dolly_detection_pose_estimation_data/dolly_sample_images/*.png",
+        "tick_period": "1Hz",
+        "focal_length": [
+          100,
+          100
+        ],
+        "optical_center": [
+          500,
+          500
+        ],
+        "distortion_coefficients": [
+          0.01,
+          0.01,
+          0.01,
+          0.01,
+          0.01
+        ]
+      }
+    },
+    "websight": {
+      "WebsightServer": {
+        "port": 3000,
+        "ui_config": {
+          "windows": {
+            "DetectNetv2 TensorRT Inference: 720x1280": {
+              "renderer": "2d",
+              "dims": {
+                "width": 1280,
+                "height": 720
+              },
+              "channels": [
+                {
+                  "name": "detect_net_inference_imagefeeder/detect_net_inference.color_camera_visualizer/isaac.viewers.ColorCameraViewer/Color",
+                  "active": true
+                },
+                {
+                  "name": "detect_net_inference_imagefeeder/detect_net_inference.detection_viewer/isaac.viewers.DetectionsViewer/detections",
+                  "active": true
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

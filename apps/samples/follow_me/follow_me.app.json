@@ -1,0 +1,282 @@
+{
+  "name": "follow_me",
+  "modules": [
+    "navigation",
+    "perception:april_tags",
+    "perception",
+    "planner",
+    "viewers",
+    "zed"
+  ],
+  "graph": {
+    "nodes": [
+      {
+        "name": "2d_carter",
+        "subgraph": "apps/carter/2d_carter.subgraph.json"
+      },
+      {
+        "name": "local_map",
+        "subgraph": "packages/navigation/apps/local_map.subgraph.json"
+      },
+      {
+        "name": "control",
+        "subgraph": "packages/navigation/apps/differential_base_control.subgraph.json"
+      },
+      {
+        "name": "commander",
+        "subgraph": "packages/navigation/apps/differential_base_commander.subgraph.json"
+      },
+      {
+        "name": "segway_odometry",
+        "components": [
+          {
+            "name": "isaac.navigation.DifferentialBaseOdometry",
+            "type": "isaac::navigation::DifferentialBaseOdometry"
+          },
+          {
+            "name": "message_ledger",
+            "type": "isaac::alice::MessageLedger"
+          }
+        ]
+      },
+      {
+        "name": "shared_robot_model",
+        "components": [
+          {
+            "name": "DifferentialBaseModel",
+            "type": "isaac::planner::DifferentialBaseModel"
+          },
+          {
+            "name": "RangeScanModel",
+            "type": "isaac::navigation::RangeScanModelFlatloc"
+          },
+          {
+            "name": "SphericalRobotShapeComponent",
+            "type": "isaac::planner::SphericalRobotShapeComponent"
+          }
+        ]
+      },
+      {
+        "name": "camera",
+        "components": [
+          {
+            "name": "zed_left_camera_initializer",
+            "type": "isaac::alice::PoseInitializer"
+          },
+          {
+            "name": "isaac.alice.MessageLedger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "isaac.ZedCamera",
+            "type": "isaac::ZedCamera"
+          },
+          {
+            "name": "isaac.viewers.ColorCameraViewer",
+            "type": "isaac::viewers::ColorCameraViewer"
+          }
+        ]
+      },
+      {
+        "name": "april_tags_detection",
+        "components": [
+          {
+            "name": "isaac.alice.MessageLedger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "isaac.perception.AprilTagsDetection",
+            "type": "isaac::perception::AprilTagsDetection"
+          },
+          {
+            "name": "isaac.viewers.FiducialsViewer",
+            "type": "isaac::viewers::FiducialsViewer"
+          }
+        ]
+      },
+      {
+        "name": "fiducial_as_goal",
+        "components": [
+          {
+            "name": "isaac.alice.MessageLedger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "isaac.perception.FiducialAsGoal",
+            "type": "isaac::perception::FiducialAsGoal"
+          }
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "source": "camera/isaac.ZedCamera/left_camera_rgb",
+        "target": "april_tags_detection/isaac.perception.AprilTagsDetection/image"
+      },
+      {
+        "source": "camera/isaac.ZedCamera/left_camera_rgb",
+        "target": "camera/isaac.viewers.ColorCameraViewer/color_listener"
+      },
+      {
+        "source": "april_tags_detection/isaac.perception.AprilTagsDetection/april_tags",
+        "target": "fiducial_as_goal/isaac.perception.FiducialAsGoal/fiducials"
+      },
+      {
+        "source": "april_tags_detection/isaac.perception.AprilTagsDetection/april_tags",
+        "target": "april_tags_detection/isaac.viewers.FiducialsViewer/fiducials"
+      },
+      {
+        "source": "segway_odometry/isaac.navigation.DifferentialBaseOdometry/odometry",
+        "target": "control.subgraph/interface/odometry"
+      },
+      {
+        "source": "fiducial_as_goal/isaac.perception.FiducialAsGoal/plan",
+        "target": "control.subgraph/interface/plan"
+      },
+      {
+        "source": "2d_carter.subgraph/interface/diff_base_state",
+        "target": "segway_odometry/isaac.navigation.DifferentialBaseOdometry/state"
+      },
+      {
+        "source": "control.subgraph/interface/command",
+        "target": "commander.subgraph/interface/control"
+      },
+      {
+        "source": "commander.subgraph/interface/command",
+        "target": "2d_carter.subgraph/interface/diff_base_command"
+      },
+      {
+        "source": "2d_carter.subgraph/interface/flatscan",
+        "target": "local_map.subgraph/interface/flatscan"
+      }
+    ]
+  },
+  "config": {
+    "control.lqr": {
+      "isaac.planner.DifferentialBaseLqrPlanner": {
+        "static_frame": "robot",
+        "robot_model": "shared_robot_model/SphericalRobotShapeComponent",
+        "manual_mode_channel": "commander.robot_remote/isaac.navigation.RobotRemoteControl/manual_mode"
+      }
+    },
+    "segway_odometry": {
+      "isaac.navigation.DifferentialBaseOdometry": {
+        "tick_period": "100Hz"
+      }
+    },
+    "2d_carter.scan_flattener.scan_accumulator": {
+      "isaac.perception.ScanAccumulator": {
+        "min_count": 900
+      }
+    },
+    "2d_carter.scan_flattener.range_scan_flattening": {
+      "isaac.perception.RangeScanFlattening": {
+        "height_min": -0.44,
+        "height_max": 0.71
+      }
+    },
+    "2d_carter.carter_hardware.vlp16": {
+      "lidar_initializer": {
+        "lhs_frame": "robot",
+        "rhs_frame": "lidar",
+        "pose": [1.0, 0.0, 0.0, 0.0, -0.04, 0.0, 0.59]
+      }
+    },
+    "april_tags_detection": {
+      "isaac.perception.AprilTagsDetection": {
+        "max_tags": 50,
+        "tag_dimensions": 0.165
+      }
+    },
+    "fiducial_as_goal": {
+      "isaac.perception.FiducialAsGoal": {
+        "target_fiducial_id": "tag36h11_1",
+        "robot_frame": "robot",
+        "camera_frame": "left_camera"
+      }
+    },
+    "shared_robot_model": {
+      "SphericalRobotShapeComponent": {
+        "circles": [
+          { "center": [0.0 ,0.0], "radius": 0.4},
+          { "center": [0.2 ,0.2], "radius": 0.2},
+          { "center": [0.2 ,-0.2], "radius": 0.2}
+        ]
+      }
+    },
+    "camera": {
+      "zed_left_camera_initializer": {
+        "lhs_frame": "robot",
+        "rhs_frame": "left_camera",
+        "pose": [
+          0.5,
+          -0.5,
+          0.5,
+          -0.5,
+          0.11,
+          0.06,
+          0.73
+        ]
+      },
+      "isaac.ZedCamera": {
+        "resolution": "1280x720",
+        "tick_period": "60Hz"
+      },
+      "isaac.viewers.ColorCameraViewer": {
+        "target_fps": 20,
+        "camera_name": "left_camera"
+      }
+    },
+    "websight": {
+      "WebsightServer": {
+        "port": 3000,
+        "ui_config": {
+          "windows": {
+            "follow me - Local View": {
+              "renderer": "2d",
+              "dims": {
+                "width": 256,
+                "height": 256
+              },
+              "channels": [
+                {
+                  "name": "follow_me/local_map.local_map/isaac.navigation.LocalMap/local_map"
+                },
+                {
+                  "name": "follow_me/control.lqr/isaac.planner.DifferentialBaseLqrPlanner/plan"
+                },
+                {
+                  "name": "follow_me/fiducial_as_goal/isaac.perception.FiducialAsGoal/all"
+                },
+                {
+                  "name": "follow_me/fiducial_as_goal/isaac.perception.FiducialAsGoal/target"
+                }
+              ]
+            },
+            "follow me - Tags": {
+              "renderer": "2d",
+              "channels": [
+                {
+                  "name": "follow_me/camera/isaac.viewers.ColorCameraViewer/Color"
+                },
+                {
+                  "name": "follow_me/april_tags_detection/isaac.viewers.FiducialsViewer/fiducials"
+                },
+                {
+                  "name": "follow_me/fiducial_as_goal/isaac.perception.FiducialAsGoal/tag_pose"
+                },
+                {
+                  "name": "follow_me/fiducial_as_goal/isaac.perception.FiducialAsGoal/target_line"
+                },
+                {
+                  "name": "follow_me/fiducial_as_goal/isaac.perception.FiducialAsGoal/target"
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}
+

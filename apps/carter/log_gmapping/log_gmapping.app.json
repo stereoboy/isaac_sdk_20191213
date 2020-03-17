@@ -1,0 +1,249 @@
+{
+  "name": "log_gmapping",
+  "modules": [
+    "lidar_slam:g_mapping",
+    "navigation",
+    "perception"
+  ],
+  "graph": {
+    "nodes": [
+      {
+        "name": "robot_pose_initializer",
+        "start_order": -200,
+        "components": [
+          {
+            "name": "initial_pose",
+            "type": "isaac::alice::PoseInitializer"
+          }
+        ]
+      },
+      {
+        "name": "lidar_pose",
+        "start_order": -200,
+        "components": [
+          {
+            "name": "initial_pose",
+            "type": "isaac::alice::PoseInitializer"
+          }
+        ]
+      },
+      {
+        "name": "replay_bridge",
+        "components": [
+          {
+            "name": "message_ledger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "ReplayBridge",
+            "type": "isaac::alice::ReplayBridge"
+          }
+        ]
+      },
+      {
+        "name": "replay",
+        "components": [
+          {
+            "name": "message_ledger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "isaac.alice.Replay",
+            "type": "isaac::alice::Replay"
+          }
+        ]
+      },
+      {
+        "name": "segway_odometry",
+        "components": [
+          {
+            "name": "message_ledger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "isaac.navigation.DifferentialBaseWheelImuOdometry",
+            "type": "isaac::navigation::DifferentialBaseWheelImuOdometry"
+          }
+        ]
+      },
+      {
+        "name": "range_scan_flattening",
+        "components": [
+          {
+            "name": "message_ledger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "isaac.perception.RangeScanFlattening",
+            "type": "isaac::perception::RangeScanFlattening"
+          }
+        ]
+      },
+      {
+        "name": "gmapping",
+        "components": [
+          {
+            "name": "message_ledger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "gmapping",
+            "type": "isaac::lidar_slam::GMapping"
+          }
+        ]
+      },
+      {
+        "name": "range_scan_to_observation_map",
+        "components": [
+          {
+            "name": "isaac.navigation.RangeScanToObservationMap",
+            "type": "isaac::navigation::RangeScanToObservationMap"
+          },
+          {
+            "name": "message_ledger",
+            "type": "isaac::alice::MessageLedger"
+          }
+        ]
+      },
+      {
+        "name": "local_map",
+        "components": [
+          {
+            "name": "message_ledger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "isaac.navigation.LocalMap",
+            "type": "isaac::navigation::LocalMap"
+          }
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "source": "websight/WebsightServer/replay",
+        "target": "replay_bridge/ReplayBridge/request"
+      },
+      {
+        "source": "replay_bridge/ReplayBridge/reply",
+        "target": "websight/WebsightServer/replay_reply"
+      },
+      {
+        "source": "replay/isaac.alice.Replay/fullscan",
+        "target": "range_scan_flattening/isaac.perception.RangeScanFlattening/scan"
+      },
+      {
+        "source": "range_scan_flattening/isaac.perception.RangeScanFlattening/flatscan",
+        "target": "gmapping/gmapping/flatscan"
+      },
+      {
+        "source": "replay/isaac.alice.Replay/segway_state",
+        "target": "segway_odometry/isaac.navigation.DifferentialBaseWheelImuOdometry/state"
+      },
+      {
+        "source": "replay/isaac.alice.Replay/imu_corrected",
+        "target": "segway_odometry/isaac.navigation.DifferentialBaseWheelImuOdometry/imu"
+      },
+      {
+        "source": "range_scan_flattening/isaac.perception.RangeScanFlattening/flatscan",
+        "target": "range_scan_to_observation_map/isaac.navigation.RangeScanToObservationMap/flatscan"
+      },
+      {
+        "source": "range_scan_to_observation_map/isaac.navigation.RangeScanToObservationMap/observation_map",
+        "target": "local_map/isaac.navigation.LocalMap/observation_map"
+      },
+      {
+        "source": "range_scan_to_observation_map/isaac.navigation.RangeScanToObservationMap/observation_map_lattice",
+        "target": "local_map/isaac.navigation.LocalMap/observation_map_lattice"
+      },
+      {
+        "source": "segway_odometry/isaac.navigation.DifferentialBaseWheelImuOdometry/odometry",
+        "target": "gmapping/gmapping/odometry"
+      }
+    ]
+  },
+  "config": {
+    "robot_pose_initializer": {
+      "initial_pose": {
+        "lhs_frame": "world",
+        "rhs_frame": "robot_init",
+        "pose": [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        "attach_interactive_marker": true
+      }
+    },
+    "lidar_pose": {
+      "initial_pose": {
+        "lhs_frame": "robot",
+        "rhs_frame": "lidar",
+        "pose": [1.0, 0.0, 0.0, 0.0, -0.04, 0.0, 0.59]
+      }
+    },
+    "replay_bridge": {
+      "ReplayBridge": {
+        "replay_component_name": "replay/isaac.alice.Replay",
+        "tick_period": "250ms"
+      }
+    },
+    "gmapping": {
+      "gmapping": {
+        "file_path": "/tmp",
+        "build_map_period": 1.0,
+        "laser_matcher_resolution": 0.017453,
+        "map_x_max": 100.0,
+        "map_x_min": -100.0,
+        "map_y_max": 100.0,
+        "map_y_min": -100.0,
+        "map_resolution": 0.05,
+        "max_range": 85.5,
+        "map_update_range": 85.0,
+        "number_particles": 50,
+        "linear_distance": 0.2,
+        "angular_distance": 0.08,
+        "use_pose_tree": false
+      }
+    },
+    "range_scan_flattening": {
+      "isaac.perception.RangeScanFlattening": {
+        "height_min": -0.54,
+        "height_max": 1.5,
+        "pitch_fudge": 0.017453
+      }
+    },
+    "segway_odometry": {
+      "isaac.navigation.DifferentialBaseWheelImuOdometry": {
+        "tick_period": "100Hz"
+      }
+    },
+    "websight": {
+      "WebsightServer": {
+        "port": 3000,
+        "ui_config": {
+          "windows": {
+            "Log GMapping: Local View": {
+              "renderer": "2d",
+              "dims": {
+                "width": 256,
+                "height": 256
+              },
+              "channels": [
+                { "name": "log_gmapping/local_map/isaac.navigation.LocalMap/local_map" }
+              ]
+            },
+            "Log GMapping: GMapping": {
+              "renderer": "2d",
+              "dims": {
+                "width": 600,
+                "height": 600
+              },
+              "channels": [
+                { "name": "log_gmapping/gmapping/gmapping/global_map" },
+                { "name": "log_gmapping/gmapping/gmapping/fov_cone" },
+                { "name": "log_gmapping/gmapping/gmapping/robot_pos" }
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

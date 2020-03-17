@@ -1,0 +1,257 @@
+// ISAAC SDK Nightly Pipeline
+//
+// Nightly automated builds for ISAAC
+// Runs every night and archives the resulting artifacts on the
+// binary storage
+//
+// Copyright (c) 2019, NVIDIA CORPORATION. All rights reserved.
+//
+// NVIDIA CORPORATION and its licensors retain all intellectual property
+// and proprietary rights in and to this software, related documentation
+// and any modifications thereto. Any use, reproduction, disclosure or
+// distribution of this software and related documentation without an express
+// license agreement from NVIDIA CORPORATION is strictly prohibited.
+
+pipeline {
+    agent {
+        node {
+            label 'isaac && gpu'
+        }
+    }
+    triggers {
+        pollSCM('@midnight')
+    }
+    parameters {
+        string(
+            name: 'REF',
+            description: "Branch to build. Use a branch name or full REF",
+            defaultValue: 'master'
+        )
+    }
+    environment {
+        GERRIT_SERVER="git-master.nvidia.com"
+        ARTIFACTORY_CREDENTIALS_ID="isaac-artifactory-key"
+        ARTIFACTORY_BASE_URL="https://sc-hw-artf.nvidia.com/isaac-sdk-builds-local"
+        BAZEL_CACHE="http://isaac-sdk-build-01.nvidia.com:8080"
+        DOCKER_ARGUMENTS='-e HOME=/tmp -v /etc/passwd:/etc/passwd:ro'
+        NGC_REGISTRY_CREDENTIALS = 'ngc-login'
+        FAILURE_EMAIL_RECIPIENT='isacc-sdk-ci@exchange.nvidia.com'
+        SUCCESS_EMAIL_RECIPIENT='isaac-sdk-ci-notifications@exchange.nvidia.com'
+        DOC_STORAGE_ROOT='/mnt/scratch/documentation'
+    }
+    options {
+        ansiColor('xterm')
+        timestamps()
+        timeout(time: 3, unit: 'HOURS')
+    }
+    stages {
+        stage('Environment setup') {
+            steps {
+                script {
+                    // When running outside of a multibranch job, this value
+                    // is not set. Setting a default value allows for testing
+                    // as a single branch pipeline with the same code as in
+                    // multibranch builds (production).
+                    if(env.BRANCH_NAME == null ) {
+                        env.BRANCH_NAME = 'pipeline-testing'
+                        env.FAILURE_EMAIL_RECIPIENT = sh(
+                            script: 'git show -s --format=%ae',
+                            returnStdout: true
+                        ).trim()
+                        env.SUCCESS_EMAIL_RECIPIENT = env.FAILURE_EMAIL_RECIPIENT
+                    }
+                    env.ARTIFACTORY_ENDPOINT="${env.ARTIFACTORY_BASE_URL}/nightly/${env.BRANCH_NAME}"
+                }
+            }
+        }
+        stage('Build Package') {
+            steps {
+                checkout scm
+                script {
+                    env.GIT_COMMIT_ID = sh(
+                        script: "git rev-parse --short HEAD",
+                        returnStdout: true
+                    ).trim()
+                    def isaac_build_container = docker.build('isaacbuild', '-f engine/build/docker/Dockerfile engine/build')
+                    isaac_build_container.inside("${DOCKER_ARGUMENTS}") {
+                        dir(HOME) {
+                            dir(WORKSPACE) {
+                                sh "bazel build --remote_http_cache=${BAZEL_CACHE} ..."
+                                sh "doc/build_doc.sh"
+                                sh 'rsync --progress --remove-source-files ./bazel-bin/doc/isaac.tar.gz ./isaac-doc.tar.gz'
+                                sh 'packages/create_binary_package/create_release.sh'
+                                sh 'rsync --progress --remove-source-files /tmp/isaac_release.tar.xz .'
+                            }
+                        }
+                    }
+                    try {
+                        stash name:"nightly-package", includes: "isaac_release.tar.xz"
+                        stash name:"nightly-documentation", includes: "isaac-doc.tar.gz"
+                    } catch (e) {
+                        println(e.getMessage())
+                    }
+                }
+            }
+        }
+        stage("Test release package") {
+            options {
+                skipDefaultCheckout(true)
+            }
+            steps {
+                script {
+                    def isaac_build_container = docker.build('isaacbuild', '-f engine/build/docker/Dockerfile engine/build')
+                    isaac_build_container.inside("${DOCKER_ARGUMENTS} --runtime=nvidia") {
+                        dir(HOME) {
+                            dir(WORKSPACE) {
+                                unstash "nightly-package"
+                                try {
+                                    sh 'tar xf isaac_release.tar.xz'
+                                    sh 'bazel clean'
+                                    sh "bazel build ..."
+                                    sh 'bazel test --test_output=errors --jobs=1 ...'
+                                    env.PACKAGE_STATE = "Package builds cleanly"
+                                } catch (Exception e) {
+                                    env.PACKAGE_STATE = "Package builds with errors"
+                                }
+                                try {
+                                    junit 'bazel-testlogs/**/test.xml'
+                                } catch (Exception ee) {
+                                     println("No JUnit tests added: ${ee.getMessage()}")
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            post {
+                always {
+                    cleanWs()
+                }
+            }
+        }
+        stage("Final package deployment") {
+            options {
+                skipDefaultCheckout(true)
+            }
+            steps {
+                unstash "nightly-package"
+                unstash "nightly-documentation"
+                dir(WORKSPACE) {
+                    println "Deploying to artifactory"
+                    withCredentials([
+                        string(
+                            credentialsId: env.ARTIFACTORY_CREDENTIALS_ID,
+                            variable: "ISAAC_ARTIFACTORY_KEY"
+                        )
+                    ]) {
+                        script {
+                            env.ARTIFACTORY_DOWNLOAD = sh (returnStdout:true,
+                                script: """
+                                    ARCHIVE_FILENAME=\$( echo isaac-sdk-`date +%Y%m%d`-${env.GIT_COMMIT_ID}.tar.xz )
+                                    curl -H 'X-JFrog-Art-Api:${ISAAC_ARTIFACTORY_KEY}' \
+                                    -T \"${WORKSPACE}/isaac_release.tar.xz\" \
+                                    \"${env.ARTIFACTORY_ENDPOINT}/\$ARCHIVE_FILENAME\" \
+                                    | grep downloadUri | grep -o -E 'https://*.[^"]*'
+                                """
+                            ).trim()
+                            env.ARTIFACTORY_DOCS = sh (returnStdout:true,
+                                script: """
+                                    DOC_FILENAME=\$( echo isaac-sdk-docs-`date +%Y%m%d`-${env.GIT_COMMIT_ID}.tar.gz )
+                                    curl -H 'X-JFrog-Art-Api:${ISAAC_ARTIFACTORY_KEY}' \
+                                    -T \"${WORKSPACE}/isaac-doc.tar.gz\" \
+                                    \"${env.ARTIFACTORY_ENDPOINT}/\$DOC_FILENAME\" \
+                                    | grep downloadUri | grep -o -E 'https://*.[^"]*'
+                                """
+                            ).trim()
+                        }
+                    }
+                }
+            }
+        }
+        stage("Upload nightly isaac build image") {
+            steps {
+                checkout scm
+                script {
+                    docker.withRegistry('https://nvcr.io',  NGC_REGISTRY_CREDENTIALS) {
+                        def isaac_image = docker.build('nvidian/isaac-sdk/isaac-sdk', '-f engine/build/docker/Dockerfile engine/build' )
+                        if(env.BRANCH_NAME == 'master') {
+                            isaac_image.push('nightly')
+                        } else {
+                            isaac_image.push(env.BRANCH_NAME)
+                        }
+                    }
+                }
+            }
+        }
+        stage("Run Evaluation") {
+            steps {
+                build job: 'evaluation-nightly', wait: false, parameters: [
+                    string(name: 'REF', value: params.REF)
+                ]
+            }
+        }
+        stage("Publish documentation to internal server") {
+            steps {
+                unstash "nightly-documentation"
+                sh """
+                tar xf isaac-doc.tar.gz
+                rsync --progress --remove-source-files -r isaac/* '${env.DOC_STORAGE_ROOT}/${env.BRANCH_NAME}/'
+                """
+            }
+        }
+    }
+    post {
+        failure {
+            emailext (
+                subject: "[CI-CD][ISAAC]: Failed nightly build '${env.JOB_NAME} [${env.BUILD_NUMBER}]'",
+                mimeType: 'text/html',
+                body: """
+                <html>
+                    <body>
+                        <p>Failed '${env.JOB_NAME} [${env.BUILD_NUMBER}]':</p>
+                        <p>Check console output at &QUOT;<a href='${env.BUILD_URL}'>${env.JOB_NAME} [${env.BUILD_NUMBER}]</a>&QUOT;</p>
+                    </body>
+                </html>
+                """,
+                recipientProviders: [[$class: 'DevelopersRecipientProvider']],
+                to: env.FAILURE_EMAIL_RECIPIENT,
+                attachLog: true
+            )
+        }
+        success {
+            emailext (
+                subject: "[CI-CD][ISAAC]: Nightly build available '${env.JOB_NAME} [${env.BUILD_NUMBER}]'",
+                mimeType: 'text/html',
+                body: """
+                <html>
+                    <body>
+                        <p>Successfully built '${env.JOB_NAME} [${env.BUILD_NUMBER}]':</p>
+                        <p>${env.PACKAGE_STATE}</p>
+                        <p>Check console output at &QUOT;<a href='${env.BUILD_URL}'>${env.JOB_NAME} [${env.BUILD_NUMBER}]</a>&QUOT;</p>
+                        <p>
+                            You can <a href="${env.ARTIFACTORY_DOWNLOAD}">download the package from Artifactory</a> here
+                            <pre>${env.ARTIFACTORY_DOWNLOAD}</pre>
+                        </p>
+                        <p>
+                            <a href="${env.ARTIFACTORY_DOCS}">Documentation</a> can be downloaded here
+                            <pre>${env.ARTIFACTORY_DOCS}</pre>
+                        </p>
+                        <p>
+                            For more information, please review the
+                            <a href="https://confluence.nvidia.com/display/ISDK/Nightly+builds">
+                                Nightly Builds documentation.
+                            </a>
+                        </p>
+                    </body>
+                </html>
+                """,
+                recipientProviders: [[$class: 'DevelopersRecipientProvider']],
+                to: env.SUCCESS_EMAIL_RECIPIENT,
+                attachLog: true
+            )
+        }
+        always {
+            cleanWs()
+        }
+    }
+}

@@ -1,0 +1,91 @@
+{
+  "name": "yolo_training_navsim",
+  "modules": [
+    "sight"
+  ],
+  "config": {
+    "yolo_training.detection_encoder": {
+      "isaac.ml.DetectionEncoder": {
+        "class_names": [
+          "Bucket",
+          "CardBox",
+          "CratePlastic",
+          "FireExtinguisher",
+          "Pushcart",
+          "Trashcan"
+        ],
+        "area_threshold": 100
+      }
+    },
+    "yolo_training.color_camera_encoder": {
+      "isaac.ml.ColorCameraEncoderCpu": {
+        "rows": 720,
+        "cols": 1280,
+        "pixel_normalization_mode": "PositiveNegative"
+      }
+    },
+    "yolo_training.object_detection_training_samples": {
+      "isaac.ml.SampleAccumulator": {
+        "sample_buffer_size": 200
+      }
+    },
+    "simulation.bounding_boxes": {
+      "conversion": {
+        "resolution": 2
+      }
+    },
+    "websight": {
+      "WebsightServer": {
+        "port": 3000,
+        "ui_config": {
+          "windows": {
+            "Object Detection - Color": {
+              "renderer": "2d",
+              "dims": {
+                "width": 512,
+                "height": 256
+              },
+              "channels": [
+                {
+                  "name": "yolo_training_navsim/yolo_training.color_camera_visualizer/isaac.viewers.ColorCameraViewer/Color",
+                  "active": true
+                },
+                {
+                  "name": "yolo_training_navsim/yolo_training.bounding_box_visualizer/isaac.viewers.DetectionsViewer/detections",
+                  "active": true
+                }
+              ]
+            }
+          },
+          "assets": {}
+        }
+      }
+    }
+  },
+  "graph": {
+    "nodes": [
+      {
+        "name": "simulation",
+        "subgraph": "packages/navsim/apps/navsim.subgraph.json"
+      },
+      {
+        "name": "yolo_training",
+        "subgraph": "apps/samples/yolo/yolo_training.subgraph.json"
+      }
+    ],
+    "edges": [
+      {
+        "source": "simulation.interface/output/color",
+        "target": "yolo_training.interface/subgraph/color"
+      },
+      {
+        "source": "simulation.interface/output/bounding_boxes",
+        "target": "yolo_training.interface/subgraph/detections"
+      },
+      {
+        "source": "yolo_training.interface/subgraph/teleport_command",
+        "target": "simulation.interface/input/teleport_command"
+      }
+    ]
+  }
+}

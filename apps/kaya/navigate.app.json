@@ -1,0 +1,75 @@
+{
+  "name": "navigate",
+  "config_files": [
+    "apps/assets/maps/gtc_triangle_190317.config.json"
+  ],
+  "graph_files": [
+    "apps/assets/maps/gtc_triangle_190317.graph.json"
+  ],
+  "graph": {
+    "nodes": [
+      {
+        "name": "2d_kaya",
+        "subgraph": "apps/kaya/2d_kaya.subgraph.json"
+      },
+      {
+        "name": "navigation",
+        "subgraph": "packages/navigation/apps/holonomic_base_navigation.subgraph.json"
+      },
+      {
+        "name": "goals",
+        "subgraph": "packages/navigation/apps/goal_generators.subgraph.json"
+      },
+      {
+        "name": "commander",
+        "subgraph": "packages/navigation/apps/holonomic_base_commander.subgraph.json"
+      }
+    ],
+    "edges": [
+      {
+        "source": "commander.subgraph/interface/command",
+        "target": "2d_kaya.subgraph/interface/base_command"
+      },
+      {
+        "source": "goals.subgraph/interface/goal",
+        "target": "navigation.subgraph/interface/goal"
+      },
+      {
+        "source": "navigation.subgraph/interface/feedback",
+        "target": "goals.subgraph/interface/feedback"
+      },
+      {
+        "source": "2d_kaya.subgraph/interface/flatscan",
+        "target": "navigation.subgraph/interface/flatscan_for_localization"
+      },
+      {
+        "source": "2d_kaya.subgraph/interface/flatscan",
+        "target": "navigation.subgraph/interface/flatscan_for_obstacles"
+      },
+      {
+        "source": "2d_kaya.subgraph/interface/base_state",
+        "target": "navigation.subgraph/interface/state"
+      },
+      {
+        "source": "2d_kaya.subgraph/interface/imu_raw",
+        "target": "navigation.subgraph/interface/imu_raw"
+      },
+      {
+        "source": "navigation.subgraph/interface/command",
+        "target": "commander.subgraph/interface/control"
+      }
+    ]
+  },
+  "config": {
+    "navigation.control.lqr": {
+      "isaac.planner.HolonomicBaseLqrPlanner": {
+        "manual_mode_channel": "commander.robot_remote/isaac.navigation.RobotRemoteControl/manual_mode"
+      }
+    },
+    "navigation.control.control": {
+      "isaac.planner.HolonomicBaseControl": {
+        "manual_mode_channel": "commander.robot_remote/isaac.navigation.RobotRemoteControl/manual_mode"
+      }
+    }
+  }
+}

@@ -1,0 +1,77 @@
+{
+  "name": "orb_demo",
+  "modules": [
+    "//packages/orb/components:extract_visualize_orb",
+    "zed",
+    "sight"
+  ],
+  "graph": {
+    "nodes": [
+      {
+        "name": "zed",
+        "components": [
+          {
+            "name": "message_ledger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "zed",
+            "type": "isaac::ZedCamera"
+          }
+        ]
+      },
+      {
+        "name": "extract_visualize_orb",
+        "components": [
+          {
+            "name": "message_ledger",
+            "type": "isaac::alice::MessageLedger"
+          },
+          {
+            "name": "extract_visualize_orb",
+            "type": "isaac::orb::ExtractAndVisualizeOrb"
+          }
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "source": "zed/zed/left_camera_rgb",
+        "target": "extract_visualize_orb/extract_visualize_orb/input_image"
+      }
+    ]
+  },
+  "config": {
+    "zed": {
+      "zed": {
+        "resolution": "1280x720",
+        "tick_period": "30Hz"
+      }
+    },
+    "extract_visualize_orb": {
+      "extract_visualize_orb": {
+        "max_features": 250,
+        "fast_threshold": 20,
+        "grid_num_cells_linear": 8,
+        "downsampling_factor": 0.7,
+        "max_levels": 4
+      }
+    },
+    "websight": {
+      "WebsightServer": {
+      "port": 3000,
+      "ui_config": {
+        "windows": {
+        "orb_overlay": {
+          "renderer": "2d",
+          "channels": [
+            { "name": "orb_demo/zed/zed/left_rgb" },
+            { "name": "orb_demo/extract_visualize_orb/extract_visualize_orb/orb_overlay" }
+          ]
+        }
+        }
+      }
+      }
+    }
+  }
+}
